@@ -3,106 +3,86 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Online Multiplayer Card Game</title>
+<title>Multiplayer Card Game</title>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- SUPABASE -->
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
 <style>
-
-:root{
-    --bg:#111827;
-    --panel:#1f2937;
-    --gold:#facc15;
-    --green:#22c55e;
-    --red:#ef4444;
-    --blue:#3b82f6;
-}
-
-*{
+body{
     margin:0;
     padding:0;
-    box-sizing:border-box;
-    font-family:Arial,sans-serif;
-}
-
-body{
-    background:var(--bg);
+    font-family:Arial;
+    background:#1a252f;
     color:white;
-    min-height:100vh;
-    padding:15px;
 }
 
-.top-panel{
-    background:var(--panel);
-    padding:15px;
-    border-radius:10px;
-    margin-bottom:15px;
-    text-align:center;
+#setup-screen{
+    position:fixed;
+    inset:0;
+    background:#1a252f;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    gap:15px;
 }
 
-input{
-    padding:10px;
+.btn{
+    padding:10px 20px;
     border:none;
-    border-radius:6px;
-    width:200px;
-}
-
-button{
-    padding:10px 15px;
-    border:none;
-    border-radius:6px;
+    border-radius:5px;
     cursor:pointer;
     font-weight:bold;
 }
 
 .btn-green{
-    background:var(--green);
+    background:#2ecc71;
     color:white;
 }
 
 .btn-blue{
-    background:var(--blue);
+    background:#3498db;
     color:white;
 }
 
-.status{
-    margin-top:10px;
-    color:var(--gold);
-    font-weight:bold;
+#room-url-input{
+    width:300px;
+    padding:10px;
 }
 
-.board{
+#main-container{
     display:flex;
     flex-direction:column;
-    gap:15px;
+    padding:10px;
 }
 
-.player-box{
-    background:var(--panel);
-    padding:15px;
+.panel{
+    background:#34495e;
+    padding:10px;
     border-radius:10px;
+    margin-bottom:10px;
 }
 
-.hand{
+.hand-container{
     display:flex;
     gap:10px;
     flex-wrap:wrap;
-    justify-content:center;
     margin-top:10px;
 }
 
 .card{
-    width:70px;
-    height:100px;
+    width:60px;
+    height:90px;
     background:white;
-    border-radius:8px;
     color:black;
-    padding:5px;
+    border-radius:8px;
     display:flex;
-    flex-direction:column;
-    justify-content:space-between;
-    font-weight:bold;
+    justify-content:center;
+    align-items:center;
+    font-size:22px;
     cursor:pointer;
+    font-weight:bold;
 }
 
 .red{
@@ -113,594 +93,464 @@ button{
     color:black;
 }
 
-.center{
-    font-size:28px;
-    text-align:center;
+#chat-messages{
+    height:200px;
+    overflow:auto;
+    background:#2c3e50;
+    padding:10px;
+    border-radius:10px;
+    margin-top:10px;
 }
 
-.table{
-    background:var(--panel);
-    padding:20px;
-    border-radius:10px;
+.msg{
+    margin-bottom:8px;
+}
+
+#chat-input{
+    width:80%;
+    padding:10px;
+}
+
+#status-text{
+    color:yellow;
+    margin-top:10px;
+}
+
+#table{
     display:flex;
     justify-content:center;
     gap:40px;
-    min-height:150px;
+    margin:20px 0;
 }
 
 .slot{
-    width:90px;
-    height:120px;
-    border:2px dashed #555;
-    border-radius:8px;
+    width:70px;
+    height:100px;
+    border:2px dashed white;
     display:flex;
-    align-items:center;
     justify-content:center;
+    align-items:center;
+    border-radius:10px;
 }
-
-.scoreboard{
-    display:flex;
-    justify-content:space-around;
-    margin-top:10px;
-    font-size:18px;
-    font-weight:bold;
-}
-
 </style>
 </head>
 
 <body>
 
-<div class="top-panel">
+<div id="setup-screen">
 
-    <h2>ONLINE MULTIPLAYER CARD GAME</h2>
+    <h1>Multiplayer Card Game</h1>
 
-    <br>
-
-    <input type="text" id="room-id" placeholder="Enter Room ID">
-
-    <button class="btn-green" onclick="createRoom()">
+    <button id="btn-create-room" class="btn btn-green">
         Create Room
     </button>
 
-    <button class="btn-blue" onclick="joinRoom()">
-        Join Room
-    </button>
+    <div id="share-link-box" style="display:none;">
 
-    <br><br>
+        <input type="text" id="room-url-input" readonly>
 
-    <button onclick="choosePlayer('P1')">
-        Join As Player 1
-    </button>
+        <button id="btn-copy-link" class="btn btn-blue">
+            Copy Link
+        </button>
 
-    <button onclick="choosePlayer('P2')">
-        Join As Player 2
-    </button>
-
-    <br><br>
-
-    <button class="btn-green" onclick="startGame()">
-        Start Game
-    </button>
-
-    <div class="status" id="status">
-        Waiting...
-    </div>
-
-    <div class="scoreboard">
-        <div>P1 Score: <span id="p1-score">0</span></div>
-        <div>Turn: <span id="turn-text">-</span></div>
-        <div>P2 Score: <span id="p2-score">0</span></div>
     </div>
 
 </div>
 
-<div class="board">
+<div id="main-container">
 
-    <div class="player-box">
-        <h3>Player 2 Hand</h3>
-        <div class="hand" id="p2-hand"></div>
+    <div class="panel">
+        <h3 id="status-text">Connecting...</h3>
     </div>
 
-    <div class="table">
+    <div class="panel">
+        <h3>Your Cards</h3>
+        <div id="my-hand" class="hand-container"></div>
+    </div>
+
+    <div id="table">
 
         <div>
-            <h4>P2 Card</h4>
-            <div class="slot" id="p2-slot"></div>
+            <h4>Opponent</h4>
+            <div class="slot" id="opp-slot"></div>
         </div>
 
         <div>
-            <h4>P1 Card</h4>
-            <div class="slot" id="p1-slot"></div>
+            <h4>You</h4>
+            <div class="slot" id="my-slot"></div>
         </div>
 
     </div>
 
-    <div class="player-box">
-        <h3>Player 1 Hand</h3>
-        <div class="hand" id="p1-hand"></div>
+    <div class="panel">
+
+        <h3>Chat</h3>
+
+        <div id="chat-messages"></div>
+
+        <div style="margin-top:10px;">
+            <input type="text" id="chat-input">
+            <button id="chat-send" class="btn btn-blue">
+                Send
+            </button>
+        </div>
+
     </div>
 
 </div>
 
 <script>
 
-// ===========================
-// SUPABASE
-// ===========================
+/* =========================
+   SUPABASE CONNECTION
+========================= */
 
-const supabaseUrl =
+const SUPABASE_URL =
 "https://pftbngrjxxkasossvhwm.supabase.co";
 
-const supabaseKey =
+const SUPABASE_KEY =
 "sb_publishable_EmdkxXEgX5XYcvPnKZjdMA_Ff8G9PdC";
 
 const client = window.supabase.createClient(
-    supabaseUrl,
-    supabaseKey
+    SUPABASE_URL,
+    SUPABASE_KEY
 );
 
-// ===========================
-// VARIABLES
-// ===========================
+console.log("Supabase Connected");
 
-let roomId = null;
-let myPlayer = null;
-let deck = [];
+/* =========================
+   GAME VARIABLES
+========================= */
 
-let gameState = {
-    player1Hand: [],
-    player2Hand: [],
-    tableCards:{
-        P1:null,
-        P2:null
-    },
-    currentTurn:"P1",
-    scores:{
-        P1:0,
-        P2:0
-    }
+const suits = ['♠','♣','♥','♦'];
+const values = ['7','8','9','10','J','Q','K','A'];
+
+let roomID =
+new URLSearchParams(window.location.search).get('room');
+
+let myRole = '';
+let channel = null;
+
+let myHand = [];
+
+let currentTurn = null;
+
+let tableCards = {
+    P1:null,
+    P2:null
 };
 
-// ===========================
-// CREATE ROOM
-// ===========================
+/* =========================
+   PAGE LOAD
+========================= */
 
-async function createRoom(){
+window.addEventListener('DOMContentLoaded',()=>{
 
-    roomId =
-        document.getElementById("room-id")
-        .value.trim();
+    if(roomID){
 
-    if(!roomId){
-        alert("Enter Room ID");
-        return;
+        myRole='P2';
+
+        document.getElementById('btn-create-room').style.display='none';
+
+        initRealtimeEngine();
+
     }
 
-    const { data } = await client
-        .from("game_rooms")
-        .select("*")
-        .eq("id", roomId)
-        .single();
+    else{
 
-    if(data){
-        alert("Room already exists");
-        return;
+        document.getElementById('btn-create-room')
+        .addEventListener('click',generateRoom);
+
     }
 
-    await client
-        .from("game_rooms")
-        .insert({
-            id:roomId,
-            game_state:gameState
-        });
+    document.getElementById('btn-copy-link')
+    .addEventListener('click',copyRoomLink);
 
-    subscribeRoom();
+    document.getElementById('chat-send')
+    .addEventListener('click',sendChat);
 
-    updateStatus("Room Created");
+});
+
+/* =========================
+   CREATE ROOM
+========================= */
+
+function generateRoom(){
+
+    roomID=Math.random().toString(36).substring(2,9);
+
+    myRole='P1';
+
+    const link=
+    window.location.origin+
+    window.location.pathname+
+    '?room='+roomID;
+
+    document.getElementById('room-url-input').value=link;
+
+    document.getElementById('share-link-box').style.display='block';
+
+    initRealtimeEngine();
+
 }
 
-// ===========================
-// JOIN ROOM
-// ===========================
+/* =========================
+   COPY LINK
+========================= */
 
-async function joinRoom(){
+function copyRoomLink(){
 
-    roomId =
-        document.getElementById("room-id")
-        .value.trim();
+    const input=document.getElementById('room-url-input');
 
-    if(!roomId){
-        alert("Enter Room ID");
-        return;
-    }
+    input.select();
 
-    const { data } = await client
-        .from("game_rooms")
-        .select("*")
-        .eq("id", roomId)
-        .single();
+    document.execCommand('copy');
 
-    if(!data){
-        alert("Room Not Found");
-        return;
-    }
+    alert("Copied");
 
-    gameState = data.game_state;
-
-    subscribeRoom();
-
-    renderEverything();
-
-    updateStatus("Joined Room");
 }
 
-// ===========================
-// CHOOSE PLAYER
-// ===========================
+/* =========================
+   REALTIME ENGINE
+========================= */
 
-function choosePlayer(player){
+function initRealtimeEngine(){
 
-    myPlayer = player;
+    channel=client.channel(`room-${roomID}`);
 
-    updateStatus("You joined as " + player);
-}
+    channel
 
-// ===========================
-// REALTIME
-// ===========================
+    .on('broadcast',{event:'join'},()=>{
 
-function subscribeRoom(){
+        if(myRole==='P1'){
 
-    client.channel("room-"+roomId)
+            document.getElementById('setup-screen').style.display='none';
 
-    .on(
-        "postgres_changes",
-        {
-            event:"UPDATE",
-            schema:"public",
-            table:"game_rooms",
-            filter:`id=eq.${roomId}`
-        },
+            startGame();
 
-        payload => {
-
-            gameState =
-                payload.new.game_state;
-
-            renderEverything();
         }
-    )
 
-    .subscribe();
-}
+    })
 
-// ===========================
-// SAVE GAME
-// ===========================
+    .on('broadcast',{event:'deal'},({payload})=>{
 
-async function saveGame(){
+        myHand=payload.hand;
 
-    await client
-        .from("game_rooms")
-        .update({
-            game_state:gameState
-        })
-        .eq("id", roomId);
-}
+        renderHand();
 
-// ===========================
-// START GAME
-// ===========================
+        document.getElementById('setup-screen').style.display='none';
 
-async function startGame(){
+    })
 
-    generateDeck();
+    .on('broadcast',{event:'play-card'},({payload})=>{
 
-    gameState.player1Hand =
-        deck.splice(0,8);
+        if(payload.player!==myRole){
 
-    gameState.player2Hand =
-        deck.splice(0,8);
+            tableCards[payload.player]=payload.card;
 
-    gameState.currentTurn = "P1";
+            renderTable();
 
-    gameState.tableCards = {
-        P1:null,
-        P2:null
-    };
+        }
 
-    gameState.scores = {
-        P1:0,
-        P2:0
-    };
+    })
 
-    await saveGame();
+    .on('broadcast',{event:'chat'},({payload})=>{
 
-    renderEverything();
+        addChat(payload.name,payload.msg);
 
-    updateStatus("Game Started");
-}
+    })
 
-// ===========================
-// GENERATE DECK
-// ===========================
+    .subscribe((status)=>{
 
-function generateDeck(){
+        console.log(status);
 
-    const suits = [
-        {symbol:"♠",color:"black"},
-        {symbol:"♣",color:"black"},
-        {symbol:"♥",color:"red"},
-        {symbol:"♦",color:"red"}
-    ];
+        if(status==='SUBSCRIBED'){
 
-    const values = [
-        "7","8","9","10",
-        "J","Q","K","A"
-    ];
+            document.getElementById('status-text')
+            .innerText="Connected";
 
-    deck = [];
+            if(myRole==='P2'){
 
-    suits.forEach(s=>{
+                channel.send({
+                    type:'broadcast',
+                    event:'join',
+                    payload:{}
+                });
 
-        values.forEach(v=>{
+            }
 
-            deck.push({
-                val:v,
-                suit:s.symbol,
-                color:s.color
-            });
-
-        });
+        }
 
     });
 
-    for(let i=deck.length-1;i>0;i--){
-
-        const j =
-            Math.floor(
-                Math.random()*(i+1)
-            );
-
-        [deck[i],deck[j]] =
-        [deck[j],deck[i]];
-    }
 }
 
-// ===========================
-// PLAY CARD
-// ===========================
+/* =========================
+   START GAME
+========================= */
 
-async function playCard(index){
+function startGame(){
 
-    if(myPlayer !== gameState.currentTurn){
-        return;
-    }
+    const deck=[];
 
-    let hand =
-        myPlayer==="P1"
-        ? gameState.player1Hand
-        : gameState.player2Hand;
+    suits.forEach(s=>{
+        values.forEach(v=>{
+            deck.push({
+                value:v,
+                suit:s,
+                color:(s==='♥'||s==='♦')?'red':'black'
+            });
+        });
+    });
 
-    const played =
-        hand.splice(index,1)[0];
+    deck.sort(()=>Math.random()-0.5);
 
-    gameState.tableCards[myPlayer] =
-        played;
+    const p1Hand=deck.slice(0,5);
+    const p2Hand=deck.slice(5,10);
 
-    gameState.currentTurn =
-        myPlayer==="P1"
-        ? "P2"
-        : "P1";
+    myHand=p1Hand;
 
-    if(
-        gameState.tableCards.P1 &&
-        gameState.tableCards.P2
-    ){
+    renderHand();
 
-        setTimeout(()=>{
-            decideWinner();
-        },500);
-    }
+    channel.send({
+        type:'broadcast',
+        event:'deal',
+        payload:{
+            hand:p2Hand
+        }
+    });
 
-    await saveGame();
-
-    renderEverything();
 }
 
-// ===========================
-// DECIDE WINNER
-// ===========================
+/* =========================
+   RENDER HAND
+========================= */
 
-async function decideWinner(){
+function renderHand(){
 
-    const valuesRank = {
-        "7":1,
-        "8":2,
-        "9":3,
-        "10":4,
-        "J":5,
-        "Q":6,
-        "K":7,
-        "A":8
-    };
+    const container=document.getElementById('my-hand');
 
-    const p1 =
-        gameState.tableCards.P1;
+    container.innerHTML='';
 
-    const p2 =
-        gameState.tableCards.P2;
+    myHand.forEach((card,index)=>{
 
-    let winner = null;
+        const div=document.createElement('div');
 
-    if(
-        valuesRank[p1.val] >
-        valuesRank[p2.val]
-    ){
-        winner = "P1";
-    }else{
-        winner = "P2";
-    }
+        div.className=`card ${card.color}`;
 
-    gameState.scores[winner]++;
+        div.innerHTML=`${card.value}${card.suit}`;
 
-    gameState.currentTurn = winner;
+        div.onclick=()=>playCard(index);
 
-    gameState.tableCards = {
-        P1:null,
-        P2:null
-    };
+        container.appendChild(div);
 
-    await saveGame();
+    });
 
-    renderEverything();
-
-    updateStatus(
-        winner + " won this round"
-    );
 }
 
-// ===========================
-// RENDER
-// ===========================
+/* =========================
+   PLAY CARD
+========================= */
 
-function renderEverything(){
+function playCard(index){
 
-    renderHand(
-        "p1-hand",
-        gameState.player1Hand,
-        "P1"
-    );
+    const card=myHand.splice(index,1)[0];
 
-    renderHand(
-        "p2-hand",
-        gameState.player2Hand,
-        "P2"
-    );
+    tableCards[myRole]=card;
+
+    renderHand();
 
     renderTable();
 
-    document.getElementById(
-        "p1-score"
-    ).innerText =
-    gameState.scores.P1;
-
-    document.getElementById(
-        "p2-score"
-    ).innerText =
-    gameState.scores.P2;
-
-    document.getElementById(
-        "turn-text"
-    ).innerText =
-    gameState.currentTurn;
-}
-
-// ===========================
-// RENDER HAND
-// ===========================
-
-function renderHand(
-    containerId,
-    hand,
-    player
-){
-
-    const box =
-        document.getElementById(
-            containerId
-        );
-
-    box.innerHTML = "";
-
-    hand.forEach((card,index)=>{
-
-        const div =
-            createCard(card);
-
-        if(player===myPlayer){
-
-            div.onclick = ()=>{
-                playCard(index);
-            };
+    channel.send({
+        type:'broadcast',
+        event:'play-card',
+        payload:{
+            player:myRole,
+            card:card
         }
-
-        box.appendChild(div);
     });
+
 }
 
-// ===========================
-// CREATE CARD
-// ===========================
-
-function createCard(card){
-
-    const div =
-        document.createElement("div");
-
-    div.className =
-        "card " + card.color;
-
-    div.innerHTML = `
-        <div>${card.val}</div>
-        <div class="center">
-            ${card.suit}
-        </div>
-        <div style="transform:rotate(180deg)">
-            ${card.val}
-        </div>
-    `;
-
-    return div;
-}
-
-// ===========================
-// TABLE
-// ===========================
+/* =========================
+   RENDER TABLE
+========================= */
 
 function renderTable(){
 
-    document.getElementById(
-        "p1-slot"
-    ).innerHTML = "";
+    document.getElementById('my-slot').innerHTML='';
 
-    document.getElementById(
-        "p2-slot"
-    ).innerHTML = "";
+    document.getElementById('opp-slot').innerHTML='';
 
-    if(gameState.tableCards.P1){
+    if(tableCards[myRole]){
 
-        document.getElementById(
-            "p1-slot"
-        ).appendChild(
-            createCard(
-                gameState.tableCards.P1
-            )
-        );
+        const div=document.createElement('div');
+
+        div.className=`card ${tableCards[myRole].color}`;
+
+        div.innerHTML=
+        `${tableCards[myRole].value}${tableCards[myRole].suit}`;
+
+        document.getElementById('my-slot').appendChild(div);
+
     }
 
-    if(gameState.tableCards.P2){
+    const oppRole=myRole==='P1'?'P2':'P1';
 
-        document.getElementById(
-            "p2-slot"
-        ).appendChild(
-            createCard(
-                gameState.tableCards.P2
-            )
-        );
+    if(tableCards[oppRole]){
+
+        const div=document.createElement('div');
+
+        div.className=`card ${tableCards[oppRole].color}`;
+
+        div.innerHTML=
+        `${tableCards[oppRole].value}${tableCards[oppRole].suit}`;
+
+        document.getElementById('opp-slot').appendChild(div);
+
     }
+
 }
 
-// ===========================
-// STATUS
-// ===========================
+/* =========================
+   CHAT
+========================= */
 
-function updateStatus(msg){
+function sendChat(){
 
-    document.getElementById(
-        "status"
-    ).innerText = msg;
+    const input=document.getElementById('chat-input');
+
+    const msg=input.value.trim();
+
+    if(!msg)return;
+
+    addChat('You',msg);
+
+    channel.send({
+        type:'broadcast',
+        event:'chat',
+        payload:{
+            name:myRole,
+            msg:msg
+        }
+    });
+
+    input.value='';
+
+}
+
+function addChat(name,msg){
+
+    const div=document.createElement('div');
+
+    div.className='msg';
+
+    div.innerHTML=`<b>${name}:</b> ${msg}`;
+
+    document.getElementById('chat-messages')
+    .appendChild(div);
+
 }
 
 </script>
