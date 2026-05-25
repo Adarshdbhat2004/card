@@ -238,7 +238,7 @@ let scores = { P1: 0, P2: 0 };
 let roundsPlayed = 0;
 
 let tableCards = { P1: null, P2: null };
-let currentTurn = null; // Who is allowed to throw
+let currentTurn = null; 
 
 // Phase Management and Multi-User Votes
 let gameState = 'WAITING_FOR_PLAYERS'; 
@@ -284,22 +284,27 @@ function copyRoomLink(){
 }
 
 /* =========================
-   REALTIME ENGINE & SYNC
+   REALTIME ENGINE & RESILIENT SYNC
 ========================= */
 function initRealtimeEngine(){
-    channel = client.channel(`room-${roomID}`);
+    channel = client.channel(`room-${roomID}`, {
+        config: {
+            broadcast: { ack: false, self: false }
+        }
+    });
 
     channel
     .on('broadcast', {event: 'join'}, () => {
+        addChat("System", "An opponent has entered the room!");
         if(myRole === 'P1' && gameState === 'WAITING_FOR_PLAYERS') {
             gameState = 'ROOM_READY';
             updateUIStatus();
+            channel.send({ type: 'broadcast', event: 'host-acknowledge', payload: {} });
         }
     })
-    .on('broadcast', {event: 'sync-state'}, ({payload}) => {
-        // Sync vital components from Host (P1) if required
-        if(myRole === 'P2' && payload.fullDeck) {
-            fullDeck = payload.fullDeck;
+    .on('broadcast', {event: 'host-acknowledge'}, () => {
+        if(myRole === 'P2' && gameState === 'WAITING_FOR_HOST') {
+            addChat("System", "Connected to Host successfully!");
         }
     })
     .on('broadcast', {event: 'deal-part1'}, ({payload}) => {
@@ -318,7 +323,6 @@ function initRealtimeEngine(){
     })
     .on('broadcast', {event: 'trump-selected'}, ({payload}) => {
         trumpSuit = payload.suit;
-        // Proceed to Deal Part 2
         gameState = 'DEAL_PART_2';
         updateUIStatus();
         if(myRole === 'P1') {
@@ -342,7 +346,6 @@ function initRealtimeEngine(){
     .on('broadcast', {event: 'play-card'}, ({payload}) => {
         tableCards[payload.player] = payload.card;
         
-        // Phase 2: Reveal the trump the structural second a card lands on the opening layout
         if(!trumpRevealed) {
             trumpRevealed = true;
             document.getElementById('trump-text').innerText = trumpSuit;
@@ -356,7 +359,6 @@ function initRealtimeEngine(){
 
         renderTable();
         
-        // Determine shifts in loop turn
         if(tableCards.P1 && tableCards.P2) {
             gameState = 'TRICK_WINNER_VOTING';
             clearVotes();
@@ -376,17 +378,25 @@ function initRealtimeEngine(){
         addChat(payload.name, payload.msg);
     })
     .subscribe((status) => {
+        console.log("Supabase Channel Status:", status);
+        
         if(status === 'SUBSCRIBED'){
-            document.getElementById('status-text').innerText = "Connected. Waiting for progression...";
+            document.getElementById('status-text').innerText = "Connected to Server.";
+            
             if(myRole === 'P2'){
-                channel.send({ type: 'broadcast', event: 'join', payload: {} });
+                setTimeout(() => {
+                    channel.send({
+                        type: 'broadcast',
+                        event: 'join',
+                        payload: {}
+                    });
+                }, 300);
+                
                 document.getElementById('setup-screen').style.display = 'none';
                 gameState = 'WAITING_FOR_HOST';
                 updateUIStatus();
             } else {
-                if(gameState === 'WAITING_FOR_PLAYERS') {
-                     updateUIStatus();
-                }
+                updateUIStatus();
             }
         }
     });
@@ -395,13 +405,15 @@ function initRealtimeEngine(){
 /* =========================
    PHASE WORKFLOWS & ENGINE
 ========================= */
-
 function updateUIStatus() {
     const statusText = document.getElementById('status-text');
     const actionPanel = document.getElementById('action-panel');
     actionPanel.innerHTML = '';
 
     switch(gameState) {
+        case 'WAITING_FOR_PLAYERS':
+            statusText.innerText = "Room Created. Send the URL link to Player 2.";
+            break;
         case 'ROOM_READY':
             statusText.innerText = "Player 2 Connected! Ready to begin.";
             if(myRole === 'P1') {
@@ -502,7 +514,6 @@ function buildDeck() {
             d.push({ value: v, suit: s, color: suitColors[s] });
         });
     });
-    // Shuffle
     return d.sort(() => Math.random() - 0.5);
 }
 
@@ -564,7 +575,7 @@ function executeDealPart2() {
     });
 }
 
-/* PHASE 2: TURNConsensus & GAMEPLAY LOOP */
+/* PHASE 2: TURN CONSENSUS & GAMEPLAY LOOP */
 function evaluateTurnSyncVote() {
     if(votes.turnSync.P1 && votes.turnSync.P2) {
         if(votes.turnSync.P1 === votes.turnSync.P2) {
@@ -606,15 +617,14 @@ function evaluateTrickWinnerVote() {
                 document.getElementById('p1-score').innerText = scores.P1;
                 document.getElementById('p2-score').innerText = scores.P2;
                 addChat("System", `${winner} won this round's point!`);
-                currentTurn = winner; // Winner throws the opening card next round
+                currentTurn = winner; 
             } else {
                 addChat("System", "This round ended in an accepted Draw.");
             }
 
             roundsPlayed++;
-            
-            // Cleanup table state 
             tableCards = { P1: null, P2: null };
+            
             setTimeout(() => {
                 renderTable();
                 if(roundsPlayed >= 8) {
