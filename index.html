@@ -1,66 +1,275 @@
-// --- SECURE PUBLIC SANDBOX MULTIPLAYER CONNECTION CONSTANTS ---
-const SUPABASE_URL = "https://gqxtwxlunvbygofbyjny.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdxeHR3eGx1bnZieWdvZmJ5am55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTU2MTM0MDAsImV4cCI6MjAyNzE3MzQwMH0.t4DMTF_R-pYg-gJt2LscR_I_J8D-CgqX3N1T2DqB0Fk";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Multiplayer Card Game</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root { --primary: #2c3e50; --gold: #f1c40f; --red: #e74c3c; --blue: #3498db; --green: #2ecc71; --dark: #1a252f; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        body { background: var(--primary); color: #fff; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        #setup-screen { position: fixed; inset: 0; background: var(--dark); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 999; padding: 20px; text-align: center; }
+        #main-container { display: flex; flex: 1; height: 100%; overflow: hidden; }
+        #game-area { flex: 3; display: flex; flex-direction: column; justify-content: space-between; padding: 10px; }
+        #sidebar { flex: 1; min-width: 260px; background: var(--dark); display: flex; flex-direction: column; border-left: 2px solid rgba(0,0,0,0.2); }
+        .panel { background: #34495e; padding: 10px; border-radius: 8px; text-align: center; width: 100%; }
+        .score-board { display: flex; justify-content: space-around; font-weight: bold; }
+        .hand-container { display: flex; justify-content: center; gap: 6px; min-height: 105px; align-items: center; padding: 4px; border: 1px dashed rgba(255,255,255,0.1); border-radius: 6px; overflow-x: auto; }
+        #table-field { width: 100%; flex: 1; margin: 10px 0; border: 2px dashed #4f5d73; border-radius: 12px; display: flex; justify-content: center; align-items: center; gap: 15px; background: rgba(0,0,0,0.1); }
+        .play-slot { width: 85px; height: 115px; border: 2px solid rgba(255,255,255,0.1); border-radius: 8px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .card { width: 68px; height: 96px; background: white; border-radius: 6px; color: black; font-weight: bold; font-size: 16px; cursor: pointer; display: flex; flex-direction: column; justify-content: space-between; padding: 4px; flex-shrink: 0; }
+        .card.red { color: var(--red); }
+        .card.hidden-back { background: var(--blue); border: 2px solid white; }
+        .card.disabled { opacity: 0.3; cursor: not-allowed; }
+        .modal-step { display: none; background: var(--dark); border: 2px solid var(--gold); border-radius: 10px; padding: 12px; text-align: center; }
+        .btn { border: none; padding: 10px 16px; cursor: pointer; border-radius: 4px; font-weight: bold; margin: 4px; text-transform: uppercase; }
+        .btn-green { background: var(--green); color: white; }
+        .btn-blue { background: var(--blue); color: white; }
+        input[type="text"] { width: 80%; padding: 10px; margin: 10px 0; border-radius: 4px; border: none; text-align: center; }
+        #chat-messages { flex: 1; padding: 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; }
+        .msg { background: #2c3e50; padding: 5px 10px; border-radius: 5px; font-size: 13px; max-width: 90%; }
+        .msg.me { align-self: flex-end; background: var(--blue); }
+        @media (max-width: 680px) { #main-container { flex-direction: column; } #sidebar { height: 150px; min-width: 100%; } }
+    </style>
+</head>
+<body>
 
-// FIX: Use the global 'supabase' object from the CDN correctly
-let supabaseClient; 
+    <div id="setup-screen">
+        <h1>Card Game Online</h1>
+        <button id="btn-create-room" class="btn btn-green">Create New Game Room</button>
+        <div id="share-link-box" style="display:none;">
+            <p>Share this link with Player 2:</p>
+            <input type="text" id="room-url-input" readonly>
+            <button id="btn-copy-link" class="btn btn-blue">Copy Link</button>
+            <p style="color: var(--gold); margin-top:10px;">Waiting for opponent...</p>
+        </div>
+    </div>
 
-const suits = [{s:'♠',c:'black'}, {s:'♣',c:'black'}, {s:'♥',c:'red'}, {s:'♦',c:'red'}];
-const values = ['7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+    <div id="main-container">
+        <div id="game-area">
+            <div class="panel">
+                <div class="score-board">
+                    <div>P1: <span id="score-p1">0</span></div>
+                    <div id="trump-display" style="visibility:hidden">TRUMP: <span id="trump-suit-val"></span></div>
+                    <div>P2: <span id="score-p2">0</span></div>
+                </div>
+                <div id="status-text">Ready</div>
+            </div>
 
-let roomID = new URLSearchParams(window.location.search).get('room');
-let myRole = ''; 
-let channel = null;
+            <div id="step-trump-select" class="modal-step">
+                <h3>Select Trump</h3>
+                <button class="btn" onclick="sendTrump('♠')">♠</button>
+                <button class="btn" onclick="sendTrump('♣')">♣</button>
+                <button class="btn" style="color:red" onclick="sendTrump('♥')">♥</button>
+                <button class="btn" style="color:red" onclick="sendTrump('♦')">♦</button>
+            </div>
 
-let fullShuffledDeck = [];
-let myHand = [];
-let oppCardsLeftCount = 0;
-let currentTurn = null;
-let trumpSuit = null;
-let trumpRevealed = false;
-let opportunityPlayer = 'P1'; 
+            <div id="step-start-verify" class="modal-step">
+                <h3>Who starts?</h3>
+                <button class="btn btn-blue" onclick="voteStart('P1')">P1</button>
+                <button class="btn btn-blue" onclick="voteStart('P2')">P2</button>
+            </div>
 
-let score = { P1: 0, P2: 0 };
-let tableCards = { P1: null, P2: null };
-let localStartVote = null;
-let localTrickVote = null;
+            <div id="step-trick-verify" class="modal-step">
+                <h3>Who won?</h3>
+                <button class="btn btn-blue" onclick="voteWinner('ME')">ME</button>
+                <button class="btn btn-red" onclick="voteWinner('OPP')">OPPONENT</button>
+            </div>
 
-// --- INITIALIZATION ---
-window.addEventListener('DOMContentLoaded', () => {
-    // FIX: Initialize the client ONLY after the library is loaded
-    if (typeof supabase !== 'undefined') {
-        supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    } else {
-        console.error("Supabase library failed to load. Check your internet connection.");
-        document.getElementById('status-text').innerText = "Error: Connection library failed.";
-    }
+            <div class="hand-container" id="opp-hand"></div>
+            <div id="table-field">
+                <div class="play-slot" id="p2-slot"></div>
+                <div class="play-slot" id="p1-slot"></div>
+            </div>
+            <div class="hand-container" id="my-hand"></div>
+        </div>
 
-    if (roomID) {
-        myRole = 'P2';
-        document.getElementById('setup-instruction').innerText = "Entering Room Channel. Connecting...";
-        document.getElementById('btn-create-room').style.display = 'none';
-        initRealtimeEngine();
-    } else {
-        document.getElementById('btn-create-room').addEventListener('click', generateMatchRoom);
-    }
-    document.getElementById('btn-copy-link').addEventListener('click', copyRoomURL);
-    document.getElementById('chat-send').addEventListener('click', transmitChatMessage);
-    document.getElementById('chat-input').addEventListener('keydown', (e) => { if(e.key === 'Enter') transmitChatMessage(); });
-});
+        <div id="sidebar">
+            <div id="chat-messages"></div>
+            <div style="display:flex; padding:5px;">
+                <input type="text" id="chat-input" style="flex:1; margin:0" placeholder="Chat...">
+                <button id="chat-send" class="btn btn-blue" style="margin:0">Send</button>
+            </div>
+        </div>
+    </div>
 
-function generateMatchRoom() {
-    // Generate a unique ID
-    roomID = Math.random().toString(36).substring(2, 9);
-    myRole = 'P1';
-    
-    // Create the room link
-    const roomLink = window.location.origin + window.location.pathname + '?room=' + roomID;
-    document.getElementById('room-url-input').value = roomLink;
-    document.getElementById('btn-create-room').style.display = 'none';
-    document.getElementById('share-link-box').style.display = 'block';
-    
-    initRealtimeEngine();
-}
+    <script>
+        const SUPABASE_URL = "https://gqxtwxlunvbygofbyjny.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdxeHR3eGx1bnZieWdvZmJ5am55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTU2MTM0MDAsImV4cCI6MjAyNzE3MzQwMH0.t4DMTF_R-pYg-gJt2LscR_I_J8D-CgqX3N1T2DqB0Fk";
+        
+        let sbClient; 
+        let roomID = new URLSearchParams(window.location.search).get('room');
+        let myRole = roomID ? 'P2' : 'P1';
+        let channel, myHand = [], oppCount = 0, currentTurn, trumpSuit, table = {P1:null, P2:null};
+        let startVote = null, trickVote = null, score = {P1:0, P2:0};
 
-// ... (Keep the rest of your functions like initRealtimeEngine, playCard, etc. below)
-// JUST MAKE SURE TO REPLACE 'channel = supabase.channel' with 'channel = supabaseClient.channel'
+        window.onload = () => {
+            sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            if(roomID) {
+                document.getElementById('setup-screen').style.display = 'none';
+                initSocket();
+            }
+            document.getElementById('btn-create-room').onclick = createRoom;
+            document.getElementById('btn-copy-link').onclick = () => {
+                document.getElementById('room-url-input').select();
+                document.execCommand('copy');
+            };
+            document.getElementById('chat-send').onclick = sendChat;
+        };
+
+        function createRoom() {
+            roomID = Math.random().toString(36).substring(7);
+            const link = window.location.origin + window.location.pathname + '?room=' + roomID;
+            document.getElementById('room-url-input').value = link;
+            document.getElementById('btn-create-room').style.display = 'none';
+            document.getElementById('share-link-box').style.display = 'block';
+            initSocket();
+        }
+
+        function initSocket() {
+            channel = sbClient.channel('room-' + roomID);
+            channel.on('broadcast', {event:'join'}, () => {
+                if(myRole==='P1') {
+                    document.getElementById('setup-screen').style.display = 'none';
+                    deal();
+                }
+            }).on('broadcast', {event:'deal'}, ({payload}) => {
+                if(myRole==='P2') {
+                    myHand = payload.p2; 
+                    oppCount = 4;
+                    document.getElementById('step-trump-select').style.display = 'none';
+                    updateUI();
+                }
+            }).on('broadcast', {event:'trump'}, ({payload}) => {
+                trumpSuit = payload.suit;
+                document.getElementById('trump-suit-val').innerText = trumpSuit;
+                if(myRole==='P2') myHand = myHand.concat(payload.p2r);
+                else myHand = myHand.concat(payload.p1r);
+                oppCount = 8;
+                document.getElementById('step-start-verify').style.display = 'block';
+                updateUI();
+            }).on('broadcast', {event:'v-start'}, ({payload}) => {
+                if(payload.from !== myRole && startVote === payload.vote) {
+                    currentTurn = startVote;
+                    document.getElementById('step-start-verify').style.display = 'none';
+                    updateUI();
+                }
+            }).on('broadcast', {event:'play'}, ({payload}) => {
+                table[payload.p] = payload.c;
+                if(payload.p !== myRole) oppCount--;
+                document.getElementById('trump-display').style.visibility = 'visible';
+                currentTurn = myRole;
+                checkTrick();
+            }).on('broadcast', {event:'v-trick'}, ({payload}) => {
+                if(payload.from !== myRole && trickVote) {
+                    let win = trickVote === 'ME' ? myRole : (myRole==='P1'?'P2':'P1');
+                    if(win === (payload.vote === 'ME' ? payload.from : (payload.from==='P1'?'P2':'P1'))) {
+                        score[win]++;
+                        document.getElementById('score-p1').innerText = score.P1;
+                        document.getElementById('score-p2').innerText = score.P2;
+                        table = {P1:null, P2:null};
+                        trickVote = null;
+                        document.getElementById('step-trick-verify').style.display = 'none';
+                        currentTurn = win;
+                        updateUI();
+                    }
+                }
+            }).on('broadcast', {event:'chat'}, ({payload}) => {
+                addChat(payload.f, payload.m);
+            }).subscribe((status) => {
+                if(status === 'SUBSCRIBED' && myRole === 'P2') channel.send({type:'broadcast', event:'join', payload:{}});
+            });
+        }
+
+        function deal() {
+            let deck = [];
+            const sList = [{s:'♠',c:'black'},{s:'♣',c:'black'},{s:'♥',c:'red'},{s:'♦',c:'red'}];
+            sList.forEach(s => ['7','8','9','10','J','Q','K','A'].forEach(v => deck.push({v,s:s.s,c:s.c})));
+            deck.sort(() => Math.random() - 0.5);
+            myHand = deck.splice(0,4);
+            let p2 = deck.splice(0,4);
+            window.fullDeck = deck; 
+            channel.send({type:'broadcast', event:'deal', payload:{p2}});
+            document.getElementById('step-trump-select').style.display = 'block';
+            updateUI();
+        }
+
+        function sendTrump(suit) {
+            trumpSuit = suit;
+            let p1r = window.fullDeck.splice(0,4);
+            let p2r = window.fullDeck.splice(0,4);
+            myHand = myHand.concat(p1r);
+            channel.send({type:'broadcast', event:'trump', payload:{suit, p1r, p2r}});
+            document.getElementById('step-trump-select').style.display = 'none';
+            document.getElementById('step-start-verify').style.display = 'block';
+            updateUI();
+        }
+
+        function voteStart(v) {
+            startVote = v;
+            channel.send({type:'broadcast', event:'v-start', payload:{from:myRole, vote:v}});
+        }
+
+        function play(i) {
+            if(currentTurn !== myRole || table[myRole]) return;
+            let c = myHand.splice(i,1)[0];
+            table[myRole] = c;
+            channel.send({type:'broadcast', event:'play', payload:{p:myRole, c}});
+            currentTurn = myRole==='P1'?'P2':'P1';
+            checkTrick();
+        }
+
+        function checkTrick() {
+            updateUI();
+            if(table.P1 && table.P2) {
+                currentTurn = null;
+                document.getElementById('step-trick-verify').style.display = 'block';
+            }
+        }
+
+        function voteWinner(v) {
+            trickVote = v;
+            channel.send({type:'broadcast', event:'v-trick', payload:{from:myRole, vote:v}});
+        }
+
+        function updateUI() {
+            const myH = document.getElementById('my-hand');
+            myH.innerHTML = '';
+            myHand.forEach((c, i) => {
+                let d = document.createElement('div');
+                d.className = `card ${c.c} ${currentTurn!==myRole?'disabled':''}`;
+                d.innerHTML = `<div>${c.v}</div><div>${c.s}</div>`;
+                d.onclick = () => play(i);
+                myH.appendChild(d);
+            });
+            const opH = document.getElementById('opp-hand');
+            opH.innerHTML = '';
+            for(let i=0; i<oppCount; i++) opH.innerHTML += `<div class="card hidden-back"></div>`;
+            
+            renderSlot('p1-slot', table.P1);
+            renderSlot('p2-slot', table.P2);
+            document.getElementById('status-text').innerText = currentTurn ? `${currentTurn} Turn` : "Wait...";
+        }
+
+        function renderSlot(id, c) {
+            const s = document.getElementById(id);
+            s.innerHTML = c ? `<div class="card ${c.c}"><div>${c.v}</div><div>${c.s}</div></div>` : '';
+        }
+
+        function sendChat() {
+            let m = document.getElementById('chat-input').value;
+            if(!m) return;
+            channel.send({type:'broadcast', event:'chat', payload:{f:myRole, m}});
+            addChat('Me', m);
+            document.getElementById('chat-input').value = '';
+        }
+
+        function addChat(f, m) {
+            const box = document.getElementById('chat-messages');
+            box.innerHTML += `<div class="msg ${f==='Me'?'me':''}"><b>${f}:</b> ${m}</div>`;
+            box.scrollTop = box.scrollHeight;
+        }
+    </script>
+</body>
+</html>
