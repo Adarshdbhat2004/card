@@ -1,559 +1,321 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Multiplayer Card Game</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Multiplayer Card Game - Pro Version</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root { --primary: #2c3e50; --gold: #f1c40f; --red: #e74c3c; --blue: #3498db; --green: #2ecc71; --dark: #1a252f; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        body { background: var(--primary); color: #fff; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        
+        #setup-screen { position: fixed; inset: 0; background: var(--dark); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; padding: 20px; text-align: center; }
+        #main-container { display: flex; flex: 1; height: 100%; overflow: hidden; }
+        #game-area { flex: 3; display: flex; flex-direction: column; justify-content: space-between; padding: 10px; position: relative; }
+        #sidebar { width: 280px; background: var(--dark); border-left: 2px solid rgba(0,0,0,0.3); display: flex; flex-direction: column; }
 
-<!-- SUPABASE -->
-<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+        /* Board Elements */
+        .panel { background: #34495e; padding: 10px; border-radius: 8px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .score-board { display: flex; justify-content: space-around; font-weight: bold; margin-bottom: 5px; }
+        #status-text { color: var(--gold); font-size: 14px; min-height: 20px; }
+        
+        .hand-container { display: flex; justify-content: center; gap: 5px; min-height: 100px; padding: 10px; background: rgba(0,0,0,0.1); border-radius: 10px; overflow-x: auto; }
+        #table-field { flex: 1; margin: 15px 0; border: 2px dashed rgba(255,255,255,0.1); border-radius: 15px; display: flex; justify-content: center; align-items: center; gap: 20px; }
+        
+        /* Card Styling */
+        .card { width: 65px; height: 95px; background: white; border-radius: 6px; color: black; position: relative; display: flex; flex-direction: column; justify-content: space-between; padding: 5px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); cursor: pointer; flex-shrink: 0; }
+        .card.red { color: var(--red); }
+        .card.hidden-back { background: var(--blue); border: 2px solid white; color: transparent; cursor: default; }
+        .card.disabled { opacity: 0.4; cursor: not-allowed; }
+        .suit-center { font-size: 24px; align-self: center; }
 
-<style>
-body{
-    margin:0;
-    padding:0;
-    font-family:Arial;
-    background:#1a252f;
-    color:white;
-}
+        /* Modals */
+        .modal-step { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--dark); border: 2px solid var(--gold); border-radius: 12px; padding: 20px; z-index: 100; width: 90%; max-width: 400px; text-align: center; box-shadow: 0 0 50px rgba(0,0,0,0.8); }
+        .btn { border: none; padding: 10px 15px; cursor: pointer; border-radius: 5px; font-weight: bold; margin: 5px; text-transform: uppercase; }
+        .btn-green { background: var(--green); color: white; }
+        .btn-blue { background: var(--blue); color: white; }
+        .btn-suit { background: white; color: black; border: 1px solid #ddd; }
 
-#setup-screen{
-    position:fixed;
-    inset:0;
-    background:#1a252f;
-    display:flex;
-    flex-direction:column;
-    justify-content:center;
-    align-items:center;
-    gap:15px;
-}
+        /* Chat */
+        #chat-messages { flex: 1; padding: 10px; overflow-y: auto; font-size: 13px; }
+        .msg { margin-bottom: 5px; word-break: break-all; }
+        .msg b { color: var(--gold); }
+        #chat-input { background: #34495e; border: none; color: white; padding: 10px; width: 100%; }
 
-.btn{
-    padding:10px 20px;
-    border:none;
-    border-radius:5px;
-    cursor:pointer;
-    font-weight:bold;
-}
-
-.btn-green{
-    background:#2ecc71;
-    color:white;
-}
-
-.btn-blue{
-    background:#3498db;
-    color:white;
-}
-
-#room-url-input{
-    width:300px;
-    padding:10px;
-}
-
-#main-container{
-    display:flex;
-    flex-direction:column;
-    padding:10px;
-}
-
-.panel{
-    background:#34495e;
-    padding:10px;
-    border-radius:10px;
-    margin-bottom:10px;
-}
-
-.hand-container{
-    display:flex;
-    gap:10px;
-    flex-wrap:wrap;
-    margin-top:10px;
-}
-
-.card{
-    width:60px;
-    height:90px;
-    background:white;
-    color:black;
-    border-radius:8px;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    font-size:22px;
-    cursor:pointer;
-    font-weight:bold;
-}
-
-.red{
-    color:red;
-}
-
-.black{
-    color:black;
-}
-
-#chat-messages{
-    height:200px;
-    overflow:auto;
-    background:#2c3e50;
-    padding:10px;
-    border-radius:10px;
-    margin-top:10px;
-}
-
-.msg{
-    margin-bottom:8px;
-}
-
-#chat-input{
-    width:80%;
-    padding:10px;
-}
-
-#status-text{
-    color:yellow;
-    margin-top:10px;
-}
-
-#table{
-    display:flex;
-    justify-content:center;
-    gap:40px;
-    margin:20px 0;
-}
-
-.slot{
-    width:70px;
-    height:100px;
-    border:2px dashed white;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    border-radius:10px;
-}
-</style>
+        @media (max-width: 700px) {
+            #main-container { flex-direction: column; }
+            #sidebar { width: 100%; height: 180px; border-left: none; border-top: 2px solid #000; }
+        }
+    </style>
 </head>
-
 <body>
 
-<div id="setup-screen">
-
-    <h1>Multiplayer Card Game</h1>
-
-    <button id="btn-create-room" class="btn btn-green">
-        Create Room
-    </button>
-
-    <div id="share-link-box" style="display:none;">
-
-        <input type="text" id="room-url-input" readonly>
-
-        <button id="btn-copy-link" class="btn btn-blue">
-            Copy Link
-        </button>
-
+    <div id="setup-screen">
+        <h1 style="color:var(--gold)">CARD GAME PRO</h1>
+        <p id="connection-status">Connecting to server...</p>
+        <button id="btn-create-room" class="btn btn-green" style="display:none">Create Game Room</button>
+        <div id="share-link-box" style="display:none; margin-top:20px;">
+            <p>Send this link to Player 2:</p>
+            <input type="text" id="room-url-input" readonly style="padding:10px; width:250px; margin:10px 0;">
+            <br>
+            <button id="btn-copy-link" class="btn btn-blue">Copy Link</button>
+            <p style="margin-top:15px; font-style:italic">Waiting for opponent to join...</p>
+        </div>
     </div>
 
-</div>
+    <div id="main-container">
+        <div id="game-area">
+            <div class="panel">
+                <div class="score-board">
+                    <div>P1 Score: <span id="score-p1">0</span></div>
+                    <div id="trump-ui" style="visibility:hidden">
+                        <span style="background:var(--gold); color:black; padding:3px 10px; border-radius:15px; font-size:12px;">TRUMP: <span id="trump-suit-val">?</span></span>
+                    </div>
+                    <div>P2 Score: <span id="score-p2">0</span></div>
+                </div>
+                <div id="status-text">Synchronizing...</div>
+            </div>
 
-<div id="main-container">
+            <div id="modal-trump" class="modal-step">
+                <h3>Select Trump Suit</h3>
+                <div style="display:flex; justify-content:center; flex-wrap:wrap; gap:10px; margin-top:15px;">
+                    <button class="btn btn-suit" onclick="lockTrump('♠')">♠</button>
+                    <button class="btn btn-suit" onclick="lockTrump('♣')">♣</button>
+                    <button class="btn btn-suit" onclick="lockTrump('♥')" style="color:red">♥</button>
+                    <button class="btn btn-suit" onclick="lockTrump('♦')" style="color:red">♦</button>
+                </div>
+            </div>
 
-    <div class="panel">
-        <h3 id="status-text">Connecting...</h3>
-    </div>
+            <div id="modal-start" class="modal-step">
+                <h3>Who Starts?</h3>
+                <p style="font-size:11px; margin-bottom:10px;">Both must pick the same person</p>
+                <button class="btn btn-blue" id="v-p1" onclick="voteStarter('P1')">Host (P1)</button>
+                <button class="btn btn-blue" id="v-p2" onclick="voteStarter('P2')">Guest (P2)</button>
+            </div>
 
-    <div class="panel">
-        <h3>Your Cards</h3>
-        <div id="my-hand" class="hand-container"></div>
-    </div>
+            <div id="modal-winner" class="modal-step">
+                <h3>Verify Round Winner</h3>
+                <button class="btn btn-green" onclick="voteWinner('ME')">I Won</button>
+                <button class="btn btn-red" onclick="voteWinner('OPP')">Opponent Won</button>
+            </div>
 
-    <div id="table">
+            <div class="hand-container" id="opp-hand"></div>
+            
+            <div id="table-field">
+                <div id="slot-P2" style="text-align:center">
+                    <div style="font-size:10px; color:#aaa">P2</div>
+                    <div class="card-target" id="p2-card-view"></div>
+                </div>
+                <div id="slot-P1" style="text-align:center">
+                    <div style="font-size:10px; color:#aaa">P1</div>
+                    <div class="card-target" id="p1-card-view"></div>
+                </div>
+            </div>
 
-        <div>
-            <h4>Opponent</h4>
-            <div class="slot" id="opp-slot"></div>
+            <div class="hand-container" id="my-hand"></div>
         </div>
 
-        <div>
-            <h4>You</h4>
-            <div class="slot" id="my-slot"></div>
+        <div id="sidebar">
+            <div style="padding:10px; font-weight:bold; background:rgba(0,0,0,0.4)">GAME CHAT</div>
+            <div id="chat-messages"></div>
+            <div style="display:flex">
+                <input type="text" id="chat-input" placeholder="Type message...">
+                <button onclick="sendChat()" class="btn btn-blue" style="margin:0">Send</button>
+            </div>
         </div>
-
     </div>
 
-    <div class="panel">
+    <script>
+        const SUPABASE_URL = "https://pftbngrjxxkasossvhwm.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_EmdkxXEgX5XYcvPnKZjdMA_Ff8G9PdC"; // Replace with your real key
+        
+        let client, channel;
+        let roomID = new URLSearchParams(window.location.search).get('room');
+        let myRole = roomID ? 'P2' : 'P1';
+        let myHand = [], oppCardCount = 0, trumpSuit = null, trumpRevealed = false;
+        let currentTurn = null, table = {P1:null, P2:null}, score = {P1:0, P2:0};
+        let startVote = null, winnerVote = null;
 
-        <h3>Chat</h3>
+        // Initialize Supabase
+        window.onload = () => {
+            client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            if(roomID) {
+                document.getElementById('setup-screen').style.display = 'none';
+                initRealtime();
+            } else {
+                document.getElementById('connection-status').innerText = "Ready to host.";
+                document.getElementById('btn-create-room').style.display = 'block';
+            }
+            
+            document.getElementById('btn-create-room').onclick = createRoom;
+            document.getElementById('btn-copy-link').onclick = () => {
+                document.getElementById('room-url-input').select();
+                document.execCommand('copy');
+                alert("Link Copied!");
+            };
+        };
 
-        <div id="chat-messages"></div>
-
-        <div style="margin-top:10px;">
-            <input type="text" id="chat-input">
-            <button id="chat-send" class="btn btn-blue">
-                Send
-            </button>
-        </div>
-
-    </div>
-
-</div>
-
-<script>
-
-/* =========================
-   SUPABASE CONNECTION
-========================= */
-
-const SUPABASE_URL =
-"https://pftbngrjxxkasossvhwm.supabase.co";
-
-const SUPABASE_KEY =
-"sb_publishable_EmdkxXEgX5XYcvPnKZjdMA_Ff8G9PdC";
-
-const client = window.supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_KEY
-);
-
-console.log("Supabase Connected");
-
-/* =========================
-   GAME VARIABLES
-========================= */
-
-const suits = ['♠','♣','♥','♦'];
-const values = ['7','8','9','10','J','Q','K','A'];
-
-let roomID =
-new URLSearchParams(window.location.search).get('room');
-
-let myRole = '';
-let channel = null;
-
-let myHand = [];
-
-let currentTurn = null;
-
-let tableCards = {
-    P1:null,
-    P2:null
-};
-
-/* =========================
-   PAGE LOAD
-========================= */
-
-window.addEventListener('DOMContentLoaded',()=>{
-
-    if(roomID){
-
-        myRole='P2';
-
-        document.getElementById('btn-create-room').style.display='none';
-
-        initRealtimeEngine();
-
-    }
-
-    else{
-
-        document.getElementById('btn-create-room')
-        .addEventListener('click',generateRoom);
-
-    }
-
-    document.getElementById('btn-copy-link')
-    .addEventListener('click',copyRoomLink);
-
-    document.getElementById('chat-send')
-    .addEventListener('click',sendChat);
-
-});
-
-/* =========================
-   CREATE ROOM
-========================= */
-
-function generateRoom(){
-
-    roomID=Math.random().toString(36).substring(2,9);
-
-    myRole='P1';
-
-    const link=
-    window.location.origin+
-    window.location.pathname+
-    '?room='+roomID;
-
-    document.getElementById('room-url-input').value=link;
-
-    document.getElementById('share-link-box').style.display='block';
-
-    initRealtimeEngine();
-
-}
-
-/* =========================
-   COPY LINK
-========================= */
-
-function copyRoomLink(){
-
-    const input=document.getElementById('room-url-input');
-
-    input.select();
-
-    document.execCommand('copy');
-
-    alert("Copied");
-
-}
-
-/* =========================
-   REALTIME ENGINE
-========================= */
-
-function initRealtimeEngine(){
-
-    channel=client.channel(`room-${roomID}`);
-
-    channel
-
-    .on('broadcast',{event:'join'},()=>{
-
-        if(myRole==='P1'){
-
-            document.getElementById('setup-screen').style.display='none';
-
-            startGame();
-
+        function createRoom() {
+            roomID = Math.random().toString(36).substring(2, 9);
+            const link = window.location.origin + window.location.pathname + '?room=' + roomID;
+            document.getElementById('room-url-input').value = link;
+            document.getElementById('share-link-box').style.display = 'block';
+            document.getElementById('btn-create-room').style.display = 'none';
+            initRealtime();
         }
 
-    })
+        function initRealtime() {
+            channel = client.channel('room-' + roomID, { config: { broadcast: { self: true } } });
 
-    .on('broadcast',{event:'deal'},({payload})=>{
-
-        myHand=payload.hand;
-
-        renderHand();
-
-        document.getElementById('setup-screen').style.display='none';
-
-    })
-
-    .on('broadcast',{event:'play-card'},({payload})=>{
-
-        if(payload.player!==myRole){
-
-            tableCards[payload.player]=payload.card;
-
-            renderTable();
-
+            channel.on('broadcast', {event:'join'}, () => {
+                if(myRole === 'P1') {
+                    document.getElementById('setup-screen').style.display = 'none';
+                    dealGame();
+                }
+            })
+            .on('broadcast', {event:'deal'}, ({payload}) => {
+                if(myRole === 'P2') {
+                    myHand = payload.p2;
+                    oppCardCount = 4;
+                    document.getElementById('status-text').innerText = "P1 is choosing Trump...";
+                    updateUI();
+                }
+            })
+            .on('broadcast', {event:'trump'}, ({payload}) => {
+                trumpSuit = payload.suit;
+                document.getElementById('trump-suit-val').innerText = trumpSuit;
+                if(myRole === 'P1') myHand = myHand.concat(payload.p1r);
+                else myHand = myHand.concat(payload.p2r);
+                oppCardCount = 8;
+                document.getElementById('modal-start').style.display = 'block';
+                updateUI();
+            })
+            .on('broadcast', {event:'v-start'}, ({payload}) => {
+                if(payload.by !== myRole && startVote === payload.vote) {
+                    currentTurn = startVote;
+                    document.getElementById('modal-start').style.display = 'none';
+                    updateUI();
+                }
+            })
+            .on('broadcast', {event:'play'}, ({payload}) => {
+                table[payload.role] = payload.card;
+                if(payload.role !== myRole) oppCardCount--;
+                if(!trumpRevealed) {
+                    trumpRevealed = true;
+                    document.getElementById('trump-ui').style.visibility = 'visible';
+                }
+                checkRoundWinner();
+            })
+            .on('broadcast', {event:'v-winner'}, ({payload}) => {
+                if(payload.by !== myRole && winnerVote) {
+                    // Normalize the vote
+                    let myClaim = winnerVote === 'ME' ? myRole : (myRole==='P1'?'P2':'P1');
+                    let opClaim = payload.vote === 'ME' ? payload.by : (payload.by==='P1'?'P2':'P1');
+                    
+                    if(myClaim === opClaim) {
+                        score[myClaim]++;
+                        document.getElementById('score-p1').innerText = score.P1;
+                        document.getElementById('score-p2').innerText = score.P2;
+                        table = {P1:null, P2:null};
+                        winnerVote = null;
+                        document.getElementById('modal-winner').style.display = 'none';
+                        currentTurn = myClaim;
+                        updateUI();
+                    }
+                }
+            })
+            .on('broadcast', {event:'chat'}, ({payload}) => {
+                if(payload.by !== myRole) addChat(payload.by, payload.msg);
+            })
+            .subscribe((status) => {
+                if(status === 'SUBSCRIBED') {
+                    if(myRole === 'P2') channel.send({type:'broadcast', event:'join', payload:{}});
+                }
+            });
         }
 
-    })
+        function dealGame() {
+            const suits = [{s:'♠',c:'black'},{s:'♣',c:'black'},{s:'♥',c:'red'},{s:'♦',c:'red'}];
+            const vals = ['7','8','9','10','J','Q','K','A'];
+            let deck = [];
+            suits.forEach(s => vals.forEach(v => deck.push({v, s:s.s, c:s.c})));
+            deck.sort(() => Math.random() - 0.5);
 
-    .on('broadcast',{event:'chat'},({payload})=>{
+            let p1 = deck.splice(0,4);
+            let p2 = deck.splice(0,4);
+            window.remainingDeck = deck;
+            myHand = p1;
 
-        addChat(payload.name,payload.msg);
+            channel.send({type:'broadcast', event:'deal', payload:{p2}});
+            document.getElementById('modal-trump').style.display = 'block';
+            updateUI();
+        }
 
-    })
+        function lockTrump(suit) {
+            trumpSuit = suit;
+            document.getElementById('trump-suit-val').innerText = suit;
+            let p1r = window.remainingDeck.splice(0,4);
+            let p2r = window.remainingDeck.splice(0,4);
+            myHand = myHand.concat(p1r);
+            channel.send({type:'broadcast', event:'trump', payload:{suit, p1r, p2r}});
+            document.getElementById('modal-trump').style.display = 'none';
+        }
 
-    .subscribe((status)=>{
+        function voteStarter(v) {
+            startVote = v;
+            channel.send({type:'broadcast', event:'v-start', payload:{by:myRole, vote:v}});
+            document.getElementById('v-p1').style.background = v==='P1'?'var(--green)':'var(--blue)';
+            document.getElementById('v-p2').style.background = v==='P2'?'var(--green)':'var(--blue)';
+        }
 
-        console.log(status);
+        function playCard(index) {
+            if(currentTurn !== myRole || table[myRole]) return;
+            let card = myHand.splice(index, 1)[0];
+            table[myRole] = card;
+            channel.send({type:'broadcast', event:'play', payload:{role:myRole, card}});
+            currentTurn = (myRole === 'P1' ? 'P2' : 'P1');
+            updateUI();
+        }
 
-        if(status==='SUBSCRIBED'){
+        function checkRoundWinner() {
+            updateUI();
+            if(table.P1 && table.P2) {
+                currentTurn = null;
+                document.getElementById('modal-winner').style.display = 'block';
+            }
+        }
 
-            document.getElementById('status-text')
-            .innerText="Connected";
+        function voteWinner(v) {
+            winnerVote = v;
+            channel.send({type:'broadcast', event:'v-winner', payload:{by:myRole, vote:v}});
+        }
 
-            if(myRole==='P2'){
+        function updateUI() {
+            const myZone = document.getElementById('my-hand');
+            myZone.innerHTML = '';
+            myHand.forEach((c, i) => {
+                let div = document.createElement('div');
+                div.className = `card ${c.c} ${currentTurn !== myRole ? 'disabled' : ''}`;
+                div.innerHTML = `<div>${c.v}</div><div class="suit-center">${c.s}</div><div style="transform:rotate(180deg)">${c.v}</div>`;
+                div.onclick = () => playCard(i);
+                myZone.appendChild(div);
+            });
 
-                channel.send({
-                    type:'broadcast',
-                    event:'join',
-                    payload:{}
-                });
-
+            const oppZone = document.getElementById('opp-hand');
+            oppZone.innerHTML = '';
+            for(let i=0; i<oppCardCount; i++) {
+                oppZone.innerHTML += `<div class="card hidden-back"></div>`;
             }
 
+            renderSlot('p1-card-view', table.P1);
+            renderSlot('p2-card-view', table.P2);
+            
+            if(currentTurn) {
+                document.getElementById('status-text').innerText = (currentTurn === myRole) ? "YOUR TURN!" : "Opponent is thinking...";
+            }
         }
 
-    });
-
-}
-
-/* =========================
-   START GAME
-========================= */
-
-function startGame(){
-
-    const deck=[];
-
-    suits.forEach(s=>{
-        values.forEach(v=>{
-            deck.push({
-                value:v,
-                suit:s,
-                color:(s==='♥'||s==='♦')?'red':'black'
-            });
-        });
-    });
-
-    deck.sort(()=>Math.random()-0.5);
-
-    const p1Hand=deck.slice(0,5);
-    const p2Hand=deck.slice(5,10);
-
-    myHand=p1Hand;
-
-    renderHand();
-
-    channel.send({
-        type:'broadcast',
-        event:'deal',
-        payload:{
-            hand:p2Hand
-        }
-    });
-
-}
-
-/* =========================
-   RENDER HAND
-========================= */
-
-function renderHand(){
-
-    const container=document.getElementById('my-hand');
-
-    container.innerHTML='';
-
-    myHand.forEach((card,index)=>{
-
-        const div=document.createElement('div');
-
-        div.className=`card ${card.color}`;
-
-        div.innerHTML=`${card.value}${card.suit}`;
-
-        div.onclick=()=>playCard(index);
-
-        container.appendChild(div);
-
-    });
-
-}
-
-/* =========================
-   PLAY CARD
-========================= */
-
-function playCard(index){
-
-    const card=myHand.splice(index,1)[0];
-
-    tableCards[myRole]=card;
-
-    renderHand();
-
-    renderTable();
-
-    channel.send({
-        type:'broadcast',
-        event:'play-card',
-        payload:{
-            player:myRole,
-            card:card
-        }
-    });
-
-}
-
-/* =========================
-   RENDER TABLE
-========================= */
-
-function renderTable(){
-
-    document.getElementById('my-slot').innerHTML='';
-
-    document.getElementById('opp-slot').innerHTML='';
-
-    if(tableCards[myRole]){
-
-        const div=document.createElement('div');
-
-        div.className=`card ${tableCards[myRole].color}`;
-
-        div.innerHTML=
-        `${tableCards[myRole].value}${tableCards[myRole].suit}`;
-
-        document.getElementById('my-slot').appendChild(div);
-
-    }
-
-    const oppRole=myRole==='P1'?'P2':'P1';
-
-    if(tableCards[oppRole]){
-
-        const div=document.createElement('div');
-
-        div.className=`card ${tableCards[oppRole].color}`;
-
-        div.innerHTML=
-        `${tableCards[oppRole].value}${tableCards[oppRole].suit}`;
-
-        document.getElementById('opp-slot').appendChild(div);
-
-    }
-
-}
-
-/* =========================
-   CHAT
-========================= */
-
-function sendChat(){
-
-    const input=document.getElementById('chat-input');
-
-    const msg=input.value.trim();
-
-    if(!msg)return;
-
-    addChat('You',msg);
-
-    channel.send({
-        type:'broadcast',
-        event:'chat',
-        payload:{
-            name:myRole,
-            msg:msg
-        }
-    });
-
-    input.value='';
-
-}
-
-function addChat(name,msg){
-
-    const div=document.createElement('div');
-
-    div.className='msg';
-
-    div.innerHTML=`<b>${name}:</b> ${msg}`;
-
-    document.getElementById('chat-messages')
-    .appendChild(div);
-
-}
-
-</script>
-
-</body>
-</html>
+        function renderSlot(id, c) {
+            const el = document.getElementById(id);
+            el.innerHTML = c ? `<div class
