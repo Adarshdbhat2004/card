@@ -71,7 +71,7 @@
 
             <!-- Choice Action Modals -->
             <div id="step-trump-select" class="modal-step">
-                <h3>Select Trump (Locked)</h3>
+                <h3>Select Trump</h3>
                 <button class="btn" style="background:#fff; color:#000;" onclick="sendTrump('♠')">♠ Spades</button>
                 <button class="btn" style="background:#fff; color:#000;" onclick="sendTrump('♣')">♣ Clubs</button>
                 <button class="btn" style="background:#fff; color:red;" onclick="sendTrump('♥')">♥ Hearts</button>
@@ -80,7 +80,7 @@
 
             <div id="step-start-verify" class="modal-step">
                 <h3>Who starts the match?</h3>
-                <p style="font-size:12px; color:#bdc3c7; margin-bottom:5px;">Both players must choose the same setup starter</p>
+                <p style="font-size:12px; color:#bdc3c7; margin-bottom:5px;">Both players must choose the same starter</p>
                 <button class="btn btn-blue" id="v-start-p1" onclick="voteStart('P1')">Host (P1)</button>
                 <button class="btn btn-blue" id="v-start-p2" onclick="voteStart('P2')">Guest (P2)</button>
             </div>
@@ -120,7 +120,7 @@
         let channel, myHand = [], oppCount = 0, currentTurn = null, trumpSuit = null, table = {P1:null, P2:null};
         let startVote = null, trickVote = null, score = {P1:0, P2:0}, trumpRevealed = false;
 
-        // Secure Polling System Check loops to guarantee window execution synchronization safely
+        // Poll execution loop safely ensures CDN asset hydration
         const checkLibInterval = setInterval(() => {
             if (typeof supabase !== 'undefined') {
                 clearInterval(checkLibInterval);
@@ -160,12 +160,17 @@
         }
 
         function initSocket() {
-            channel = sbClient.channel('room-' + roomID);
+            // FIX: Explicitly configure broadcast properties to allow open cross-device transmissions 
+            channel = sbClient.channel('room-' + roomID, {
+                config: {
+                    broadcast: { self: true }
+                }
+            });
             
             channel.on('broadcast', {event:'join'}, () => {
                 if(myRole === 'P1') {
                     document.getElementById('setup-screen').style.display = 'none';
-                    addChat('System', "Opponent connected! Dealing first cards...");
+                    addChat('System', "Opponent connected! Dealing cards...");
                     deal();
                 }
             }).on('broadcast', {event:'deal'}, ({payload}) => {
@@ -228,16 +233,20 @@
                     } else {
                         alert("Mismatched votes! Please re-verify the true trick winner.");
                         trickVote = null;
-                        document.getElementById('vote-trick-me').style.background = 'var(--blue)';
                     }
                 }
             }).on('broadcast', {event:'chat'}, ({payload}) => {
-                addChat(payload.f, payload.m);
+                if (payload.f !== (myRole === 'P1' ? 'P1' : 'P2')) {
+                    addChat(payload.f, payload.m);
+                }
             }).subscribe((status) => {
                 if(status === 'SUBSCRIBED') {
                     document.getElementById('status-text').innerText = myRole === 'P1' ? "Waiting for Opponent..." : "Syncing match connection...";
                     if(myRole === 'P2') {
-                        channel.send({type:'broadcast', event:'join', payload:{}});
+                        // Handshake trigger tells Player 1 that the link is active
+                        setTimeout(() => {
+                            channel.send({type:'broadcast', event:'join', payload:{}});
+                        }, 400);
                     }
                 }
             });
@@ -274,7 +283,7 @@
             channel.send({type:'broadcast', event:'trump', payload:{suit, p1r, p2r}});
             document.getElementById('step-trump-select').style.display = 'none';
             document.getElementById('step-start-verify').style.display = 'block';
-            document.getElementById('status-text').innerText = "Synchronize starter configuration turn...";
+            document.getElementById('status-text').innerText = "Synchronize starter turn...";
             updateUI();
         }
 
