@@ -1,220 +1,752 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Tulasi Online Cards</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        :root { --primary: #0f172a; --gold: #fbbf24; --red: #ef4444; --blue: #3b82f6; --green: #22c55e; }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
-        body { background: var(--primary); color: white; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Realtime Multiplayer Card Game</title>
 
-        /* Panels */
-        .panel { background: #1e293b; padding: 10px; text-align: center; border-bottom: 2px solid var(--blue); }
-        .score-board { display: flex; justify-content: space-around; font-weight: bold; margin-bottom: 5px; }
-        #status-text { color: var(--gold); font-size: 14px; font-weight: 600; }
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-        /* Game Board */
-        #game-world { flex: 1; display: flex; flex-direction: column; justify-content: space-between; padding: 10px; position: relative; }
-        .hand-container { display: flex; justify-content: center; gap: 5px; min-height: 100px; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 12px; }
-        #table-field { flex: 1; margin: 10px 0; border: 2px dashed #334155; border-radius: 20px; display: flex; justify-content: center; align-items: center; gap: 15px; }
-        .play-slot { width: 80px; height: 110px; border: 1px solid #444; border-radius: 8px; position: relative; display: flex; align-items: center; justify-content: center; }
+<style>
+:root{
+    --bg:#111827;
+    --panel:#1f2937;
+    --gold:#facc15;
+    --green:#22c55e;
+    --blue:#3b82f6;
+    --red:#ef4444;
+}
 
-        /* Cards */
-        .card { width: 70px; height: 100px; background: white; border-radius: 6px; color: black; display: flex; flex-direction: column; justify-content: space-between; padding: 5px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 8px rgba(0,0,0,0.3); }
-        .card.red { color: var(--red); }
-        .card.disabled { opacity: 0.4; filter: grayscale(0.5); pointer-events: none; }
-        .card .suit-center { font-size: 24px; align-self: center; }
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Arial,sans-serif;
+}
 
-        /* Overlays */
-        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 2000; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; text-align: center; }
-        .btn { padding: 15px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin: 5px; width: 220px; text-transform: uppercase; }
-        .btn-wa { background: #25D366; color: white; }
-        .btn-gold { background: var(--gold); color: black; }
-        .btn-blue { background: var(--blue); color: white; }
-        .btn-suit { width: 60px; height: 60px; font-size: 24px; background: white; color: black; }
+body{
+    background:var(--bg);
+    color:white;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+}
 
-        .active-turn { border: 2px solid var(--gold); }
-    </style>
+.top{
+    background:#000;
+    padding:15px;
+    text-align:center;
+    border-bottom:2px solid var(--blue);
+}
+
+h1{
+    font-size:22px;
+}
+
+#roomInfo{
+    margin-top:8px;
+    color:var(--gold);
+}
+
+.controls{
+    padding:15px;
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    justify-content:center;
+    background:var(--panel);
+}
+
+input{
+    padding:10px;
+    border:none;
+    border-radius:6px;
+    width:180px;
+}
+
+button{
+    padding:10px 18px;
+    border:none;
+    border-radius:6px;
+    cursor:pointer;
+    font-weight:bold;
+}
+
+.create{
+    background:var(--green);
+    color:white;
+}
+
+.join{
+    background:var(--blue);
+    color:white;
+}
+
+.start{
+    background:var(--gold);
+    color:black;
+}
+
+#status{
+    text-align:center;
+    padding:10px;
+    background:#0f172a;
+    color:var(--gold);
+    font-weight:bold;
+}
+
+.board{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    padding:10px;
+}
+
+.hand{
+    min-height:130px;
+    display:flex;
+    justify-content:center;
+    flex-wrap:wrap;
+    gap:8px;
+    background:rgba(255,255,255,0.05);
+    border-radius:10px;
+    padding:10px;
+}
+
+.table{
+    flex:1;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    gap:50px;
+}
+
+.slot{
+    width:90px;
+    height:130px;
+    border:2px dashed rgba(255,255,255,0.2);
+    border-radius:10px;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+}
+
+.card{
+    width:80px;
+    height:120px;
+    background:white;
+    border-radius:10px;
+    padding:8px;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    font-weight:bold;
+    color:black;
+    cursor:pointer;
+}
+
+.red{
+    color:red;
+}
+
+.center{
+    text-align:center;
+    font-size:28px;
+}
+
+.bottom{
+    transform:rotate(180deg);
+}
+
+.disabled{
+    opacity:0.4;
+    pointer-events:none;
+}
+
+.scoreboard{
+    display:flex;
+    justify-content:space-around;
+    padding:10px;
+    background:#000;
+}
+
+.score{
+    text-align:center;
+}
+
+.score span{
+    color:var(--gold);
+    font-size:24px;
+    display:block;
+}
+</style>
 </head>
+
 <body>
 
-    <div class="panel">
-        <div class="score-board">
-            <div>P1: <span id="score-p1">0</span></div>
-            <div id="trump-display" style="visibility:hidden">TRUMP: <span id="trump-val">?</span></div>
-            <div>P2: <span id="score-p2">0</span></div>
-        </div>
-        <div id="status-text">Connecting...</div>
+<div class="top">
+    <h1>Realtime Multiplayer Card Game</h1>
+    <div id="roomInfo">No Room Connected</div>
+</div>
+
+<div class="controls">
+    <input type="text" id="roomInput" placeholder="Enter Room ID">
+
+    <button class="create" onclick="createRoom()">
+        Create Room
+    </button>
+
+    <button class="join" onclick="joinRoom()">
+        Join Room
+    </button>
+
+    <button class="start" onclick="startGame()">
+        Start Match
+    </button>
+</div>
+
+<div id="status">
+    Waiting for room...
+</div>
+
+<div class="scoreboard">
+    <div class="score">
+        Player 1
+        <span id="score1">0</span>
     </div>
 
-    <div id="game-world">
-        <div class="hand-container" id="opp-hand"></div>
-        <div id="table-field">
-            <div class="play-slot" id="slot-p2"></div>
-            <div class="play-slot" id="slot-p1"></div>
-        </div>
-        <div class="hand-container" id="my-hand"></div>
+    <div class="score">
+        Trump
+        <span id="trump">🃏</span>
     </div>
 
-    <div id="overlay-init" class="overlay">
-        <h1 style="color:var(--gold); margin-bottom:15px;">Tulasi Cards Online</h1>
-        <div id="setup-view">
-            <button class="btn btn-gold" onclick="createRoom()">Create New Room</button>
-        </div>
-        <div id="room-view" style="display:none">
-            <p>Room ID: <span id="display-id" style="color:var(--gold)"></span></p>
-            <button class="btn btn-wa" onclick="shareWA()">Share link on WhatsApp</button>
-            <hr style="width:80%; border:0.1px solid #333; margin:20px;">
-            <button class="btn btn-blue" onclick="assignRole('P1')">Join as Player 1</button>
-            <button class="btn btn-blue" onclick="assignRole('P2')">Join as Player 2</button>
-        </div>
+    <div class="score">
+        Player 2
+        <span id="score2">0</span>
+    </div>
+</div>
+
+<div class="board">
+
+    <div class="hand" id="opponentHand"></div>
+
+    <div class="table">
+        <div class="slot" id="p2Slot"></div>
+        <div class="slot" id="p1Slot"></div>
     </div>
 
-    <div id="overlay-vote" class="overlay" style="display:none">
-        <h2>Who chooses Trump?</h2>
-        <p style="font-size:12px; color:#94a3b8; margin-bottom:15px;">Both players must click the same person</p>
-        <button class="btn btn-gold" onclick="sendVote('P1')">VOTE PLAYER 1</button>
-        <button class="btn btn-gold" onclick="sendVote('P2')">VOTE PLAYER 2</button>
-        <p id="vote-info" style="margin-top:15px; color:var(--gold)"></p>
-    </div>
+    <div class="hand" id="myHand"></div>
 
-    <div id="overlay-trump" class="overlay" style="display:none">
-        <h2 id="trump-title">Select Trump Suit</h2>
-        <div id="suit-btns" style="display:flex; gap:10px; margin-top:15px;">
-            <button class="btn btn-suit" onclick="pickSuit('♠')">♠</button>
-            <button class="btn btn-suit" onclick="pickSuit('♣')">♣</button>
-            <button class="btn btn-suit" onclick="pickSuit('♥')" style="color:var(--red)">♥</button>
-            <button class="btn btn-suit" onclick="pickSuit('♦')" style="color:var(--red)">♦</button>
-        </div>
-        <p id="wait-msg" style="display:none; color:var(--gold)">Waiting for the other player to choose...</p>
-    </div>
+</div>
 
-    <script>
-        const SB_URL = 'https://gqxtwxlunvbygofbyjny.supabase.co';
-        const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdxeHR3eGx1bnZieWdvZmJ5am55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTU2MTM0MDAsImV4cCI6MjAyNzE3MzQwMH0.t4DMTF_R-pYg-gJt2LscR_I_J8D-CgqX3N1T2DqB0Fk';
-        const supabase = window.supabase.createClient(SB_URL, SB_KEY);
+<script>
 
-        let roomID = new URLSearchParams(window.location.search).get('room');
-        let myRole = null, channel = null;
-        let gameState = { deck:[], p1Hand:[], p2Hand:[], votes:{P1:null, P2:null}, trump:null, turn:null, score:{P1:0, P2:0} };
+const supabaseUrl =
+'https://pftbngrjxxkasossvhwm.supabase.co';
 
-        window.onload = () => {
-            if(roomID) {
-                document.getElementById('setup-view').style.display = 'none';
-                document.getElementById('room-view').style.display = 'block';
-                document.getElementById('display-id').innerText = roomID;
-            }
-        };
+const supabaseKey =
+'sb_publishable_EmdkxXEgX5XYcvPnKZjdMA_Ff8G9PdC';
 
-        function createRoom() {
-            roomID = Math.floor(1000 + Math.random() * 9000);
-            const url = window.location.origin + window.location.pathname + '?room=' + roomID;
-            window.history.pushState({}, '', url);
-            document.getElementById('setup-view').style.display = 'none';
-            document.getElementById('room-view').style.display = 'block';
-            document.getElementById('display-id').innerText = roomID;
+const client =
+window.supabase.createClient(
+    supabaseUrl,
+    supabaseKey
+);
+
+let roomId = null;
+let myPlayer = null;
+let realtimeChannel = null;
+
+const suits = [
+    {symbol:'♠',color:'black'},
+    {symbol:'♣',color:'black'},
+    {symbol:'♥',color:'red'},
+    {symbol:'♦',color:'red'}
+];
+
+const values =
+['7','8','9','10','J','Q','K','A'];
+
+let gameState = {
+    player1: [],
+    player2: [],
+    table: {
+        P1:null,
+        P2:null
+    },
+    scores: {
+        P1:0,
+        P2:0
+    },
+    turn: 'P1',
+    trump:'♠'
+};
+
+async function createRoom(){
+
+    roomId =
+    document.getElementById(
+        "roomInput"
+    ).value.trim();
+
+    if(!roomId){
+        alert("Enter room ID");
+        return;
+    }
+
+    myPlayer = 'P1';
+
+    const {error} =
+    await client
+    .from('game_rooms')
+    .insert({
+        id: roomId,
+        game_state: gameState
+    });
+
+    if(error){
+        alert("Room already exists");
+        return;
+    }
+
+    connectRealtime();
+
+    document.getElementById(
+        "roomInfo"
+    ).innerText =
+    "Room: " + roomId +
+    " | You are Player 1";
+
+    updateStatus(
+        "Waiting for Player 2"
+    );
+
+}
+
+async function joinRoom(){
+
+    roomId =
+    document.getElementById(
+        "roomInput"
+    ).value.trim();
+
+    if(!roomId){
+        alert("Enter room ID");
+        return;
+    }
+
+    const {data,error} =
+    await client
+    .from('game_rooms')
+    .select("*")
+    .eq("id",roomId)
+    .single();
+
+    if(error || !data){
+        alert("Room not found");
+        return;
+    }
+
+    gameState = data.game_state;
+
+    myPlayer = 'P2';
+
+    connectRealtime();
+
+    render();
+
+    document.getElementById(
+        "roomInfo"
+    ).innerText =
+    "Room: " + roomId +
+    " | You are Player 2";
+
+    updateStatus(
+        "Connected Successfully"
+    );
+
+}
+
+function connectRealtime(){
+
+    realtimeChannel =
+    client.channel(
+        'room-' + roomId
+    );
+
+    realtimeChannel
+
+    .on(
+        'postgres_changes',
+        {
+            event:'UPDATE',
+            schema:'public',
+            table:'game_rooms',
+            filter:'id=eq.' + roomId
+        },
+
+        payload=>{
+
+            gameState =
+            payload.new.game_state;
+
+            render();
+
         }
+    )
 
-        function shareWA() {
-            window.open(`https://wa.me/?text=${encodeURIComponent("Join my game: " + window.location.href)}`, '_blank');
-        }
+    .subscribe();
 
-        function assignRole(role) {
-            myRole = role;
-            document.getElementById('overlay-init').style.display = 'none';
-            initGameConnection();
-        }
+}
 
-        function initGameConnection() {
-            channel = supabase.channel(`game_${roomID}`);
-            channel.on('broadcast', { event: 'sync' }, ({ payload }) => {
-                gameState = payload;
-                updateUI();
-            }).subscribe((status) => {
-                if(status === 'SUBSCRIBED' && myRole === 'P1') {
-                    setupNewDeck();
-                }
+function generateDeck(){
+
+    let deck = [];
+
+    suits.forEach(s=>{
+
+        values.forEach(v=>{
+
+            deck.push({
+                val:v,
+                suit:s.symbol,
+                color:s.color
             });
+
+        });
+
+    });
+
+    for(
+        let i=deck.length-1;
+        i>0;
+        i--
+    ){
+
+        const j =
+        Math.floor(
+            Math.random()*(i+1)
+        );
+
+        [deck[i],deck[j]] =
+        [deck[j],deck[i]];
+    }
+
+    return deck;
+
+}
+
+async function startGame(){
+
+    if(myPlayer !== 'P1'){
+        alert(
+            "Only Player 1 can start"
+        );
+        return;
+    }
+
+    let deck = generateDeck();
+
+    gameState.player1 =
+    deck.splice(0,8);
+
+    gameState.player2 =
+    deck.splice(0,8);
+
+    gameState.table = {
+        P1:null,
+        P2:null
+    };
+
+    gameState.scores = {
+        P1:0,
+        P2:0
+    };
+
+    gameState.turn = 'P1';
+
+    gameState.trump =
+    suits[
+        Math.floor(Math.random()*4)
+    ].symbol;
+
+    await saveGame();
+
+}
+
+async function playCard(index){
+
+    if(gameState.turn !== myPlayer)
+        return;
+
+    let hand =
+    myPlayer === 'P1'
+    ? gameState.player1
+    : gameState.player2;
+
+    const played =
+    hand.splice(index,1)[0];
+
+    gameState.table[
+        myPlayer
+    ] = played;
+
+    gameState.turn =
+    myPlayer === 'P1'
+    ? 'P2'
+    : 'P1';
+
+    if(
+        gameState.table.P1 &&
+        gameState.table.P2
+    ){
+
+        setTimeout(async()=>{
+
+            finishRound();
+
+            await saveGame();
+
+        },1000);
+
+    }
+
+    await saveGame();
+
+}
+
+function finishRound(){
+
+    const winner =
+    Math.random()>0.5
+    ? 'P1'
+    : 'P2';
+
+    gameState.scores[winner]++;
+
+    gameState.turn = winner;
+
+    gameState.table = {
+        P1:null,
+        P2:null
+    };
+
+    if(
+        gameState.player1.length===0 &&
+        gameState.player2.length===0
+    ){
+
+        let msg = "";
+
+        if(
+            gameState.scores.P1 >
+            gameState.scores.P2
+        ){
+
+            msg =
+            "Player 1 Wins";
+
+        }else if(
+            gameState.scores.P2 >
+            gameState.scores.P1
+        ){
+
+            msg =
+            "Player 2 Wins";
+
+        }else{
+
+            msg = "Match Draw";
+
         }
 
-        function setupNewDeck() {
-            const suits = [{s:'♠',c:'black'},{s:'♣',c:'black'},{s:'♥',c:'red'},{s:'♦',c:'red'}];
-            const vals = ['7','8','9','10','J','Q','K','A'];
-            let d = [];
-            suits.forEach(s => vals.forEach(v => d.push({v, suit:s.s, color:s.c})));
-            for(let i=d.length-1; i>0; i--){
-                const j = Math.floor(Math.random()*(i+1));
-                [d[i], d[j]] = [d[j], d[i]];
-            }
-            gameState.p1Hand = d.splice(0, 4);
-            gameState.p2Hand = d.splice(0, 4);
-            gameState.deck = d;
-            sync();
+        updateStatus(msg);
+
+    }
+
+}
+
+async function saveGame(){
+
+    await client
+    .from('game_rooms')
+    .update({
+        game_state:gameState
+    })
+    .eq('id',roomId);
+
+}
+
+function render(){
+
+    renderHand();
+
+    renderOpponent();
+
+    renderTable();
+
+    document.getElementById(
+        "score1"
+    ).innerText =
+    gameState.scores.P1;
+
+    document.getElementById(
+        "score2"
+    ).innerText =
+    gameState.scores.P2;
+
+    document.getElementById(
+        "trump"
+    ).innerText =
+    gameState.trump;
+
+    updateStatus(
+        gameState.turn +
+        "'s Turn"
+    );
+
+}
+
+function renderHand(){
+
+    const box =
+    document.getElementById(
+        "myHand"
+    );
+
+    box.innerHTML = "";
+
+    const hand =
+    myPlayer === 'P1'
+    ? gameState.player1
+    : gameState.player2;
+
+    hand.forEach((card,index)=>{
+
+        const div =
+        createCard(card);
+
+        if(
+            gameState.turn !== myPlayer
+        ){
+
+            div.classList.add(
+                "disabled"
+            );
+
         }
 
-        function sendVote(target) {
-            gameState.votes[myRole] = target;
-            sync();
-        }
+        div.onclick =
+        ()=>playCard(index);
 
-        function pickSuit(s) {
-            gameState.trump = s;
-            gameState.p1Hand = gameState.p1Hand.concat(gameState.deck.splice(0,4));
-            gameState.p2Hand = gameState.p2Hand.concat(gameState.deck.splice(0,4));
-            gameState.turn = 'P1'; // P1 always starts after trump
-            sync();
-        }
+        box.appendChild(div);
 
-        function sync() { channel.send({ type:'broadcast', event:'sync', payload: gameState }); updateUI(); }
+    });
 
-        function updateUI() {
-            document.getElementById('status-text').innerText = `Role: ${myRole} | Room: ${roomID}`;
-            
-            // Voting Phase
-            if(!gameState.trump) {
-                const v = gameState.votes;
-                if(v.P1 && v.P2 && v.P1 === v.P2) {
-                    document.getElementById('overlay-vote').style.display = 'none';
-                    document.getElementById('overlay-trump').style.display = 'flex';
-                    const chooser = v.P1;
-                    if(myRole === chooser) {
-                        document.getElementById('suit-btns').style.display = 'flex';
-                        document.getElementById('wait-msg').style.display = 'none';
-                    } else {
-                        document.getElementById('suit-btns').style.display = 'none';
-                        document.getElementById('wait-msg').style.display = 'block';
-                    }
-                } else {
-                    document.getElementById('overlay-vote').style.display = 'flex';
-                    document.getElementById('vote-info').innerText = v.P1 && v.P2 ? "Mismatch! Vote again." : "Waiting for votes...";
-                }
-            } else {
-                document.getElementById('overlay-trump').style.display = 'none';
-                document.getElementById('trump-display').style.visibility = 'visible';
-                document.getElementById('trump-val').innerText = gameState.trump;
-            }
+}
 
-            // Render Cards
-            const myHand = myRole === 'P1' ? gameState.p1Hand : gameState.p2Hand;
-            const myContainer = document.getElementById('my-hand');
-            myContainer.innerHTML = '';
-            myHand.forEach((card, i) => {
-                const div = document.createElement('div');
-                div.className = `card ${card.color} ${gameState.turn !== myRole ? 'disabled' : ''}`;
-                div.innerHTML = `<div>${card.v}</div><div class="suit-center">${card.suit}</div><div style="transform:rotate(180deg)">${card.v}</div>`;
-                div.onclick = () => playCard(i);
-                myContainer.appendChild(div);
-            });
-        }
+function renderOpponent(){
 
-        function playCard(index) {
-            if(gameState.turn !== myRole) return;
-            // Logic for playing card and trick evaluation would go here
-            // This is the core setup for your specific room + voting requests
-            sync();
-        }
-    </script>
+    const box =
+    document.getElementById(
+        "opponentHand"
+    );
+
+    box.innerHTML = "";
+
+    const hand =
+    myPlayer === 'P1'
+    ? gameState.player2
+    : gameState.player1;
+
+    hand.forEach(()=>{
+
+        const div =
+        document.createElement(
+            "div"
+        );
+
+        div.className = "card";
+
+        div.style.background =
+        "#444";
+
+        box.appendChild(div);
+
+    });
+
+}
+
+function renderTable(){
+
+    document.getElementById(
+        "p1Slot"
+    ).innerHTML = "";
+
+    document.getElementById(
+        "p2Slot"
+    ).innerHTML = "";
+
+    if(gameState.table.P1){
+
+        document.getElementById(
+            "p1Slot"
+        ).appendChild(
+            createCard(
+                gameState.table.P1
+            )
+        );
+
+    }
+
+    if(gameState.table.P2){
+
+        document.getElementById(
+            "p2Slot"
+        ).appendChild(
+            createCard(
+                gameState.table.P2
+            )
+        );
+
+    }
+
+}
+
+function createCard(card){
+
+    const div =
+    document.createElement("div");
+
+    div.className =
+    "card " + card.color;
+
+    div.innerHTML = `
+        <div>${card.val}</div>
+
+        <div class="center">
+            ${card.suit}
+        </div>
+
+        <div class="bottom">
+            ${card.val}
+        </div>
+    `;
+
+    return div;
+
+}
+
+function updateStatus(text){
+
+    document.getElementById(
+        "status"
+    ).innerText = text;
+
+}
+
+</script>
+
 </body>
 </html>
