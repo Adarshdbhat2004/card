@@ -1,171 +1,620 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Tulasi Online Cards</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        :root { --primary: #0f172a; --gold: #fbbf24; --blue: #3b82f6; --red: #ef4444; --green: #22c55e; }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
-        body { background: var(--primary); color: white; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Online Multiplayer Card Game</title>
 
-        .game-header { padding: 12px; background: #000; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--blue); }
-        .status-bar { background: var(--blue); color: #fff; font-size: 13px; text-align: center; padding: 6px; font-weight: 600; }
-        
-        #game-world { flex: 1; display: flex; flex-direction: column; justify-content: space-between; padding: 10px; }
-        .hand { display: flex; justify-content: center; gap: 6px; min-height: 100px; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 12px; }
-        #table { flex: 1; margin: 15px 0; border: 2px dashed #334155; border-radius: 20px; display: flex; justify-content: center; align-items: center; gap: 20px; }
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 2000; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 25px; text-align: center; }
-        .btn { padding: 15px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin: 8px; width: 240px; font-size: 16px; }
-        .btn-wa { background: #25D366; color: white; }
-        .btn-gold { background: var(--gold); color: black; }
-        .btn-blue { background: var(--blue); color: white; }
-        .btn-suit { width: 65px; height: 65px; font-size: 28px; background: white; color: black; margin: 5px; }
+<style>
+:root{
+    --primary:#1f2937;
+    --secondary:#111827;
+    --gold:#facc15;
+    --green:#22c55e;
+    --red:#ef4444;
+    --blue:#3b82f6;
+}
 
-        #chat-float { position: fixed; bottom: 120px; right: 20px; background: var(--blue); width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; z-index: 100; }
-    </style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Arial,sans-serif;
+}
+
+body{
+    background:var(--primary);
+    color:white;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+}
+
+.header{
+    background:var(--secondary);
+    padding:15px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    border-bottom:2px solid var(--blue);
+}
+
+.score-box{
+    text-align:center;
+}
+
+.score{
+    color:var(--gold);
+    font-size:22px;
+    font-weight:bold;
+}
+
+#status{
+    text-align:center;
+    padding:10px;
+    background:#0f172a;
+    color:var(--gold);
+    font-weight:bold;
+}
+
+#game-board{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    padding:10px;
+}
+
+.hand{
+    min-height:130px;
+    display:flex;
+    justify-content:center;
+    gap:8px;
+    flex-wrap:wrap;
+    background:rgba(255,255,255,0.05);
+    padding:10px;
+    border-radius:10px;
+}
+
+#table{
+    flex:1;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    gap:50px;
+}
+
+.slot{
+    width:90px;
+    height:130px;
+    border:2px dashed rgba(255,255,255,0.2);
+    border-radius:10px;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+}
+
+.card{
+    width:80px;
+    height:120px;
+    background:white;
+    border-radius:10px;
+    color:black;
+    padding:8px;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    font-weight:bold;
+    cursor:pointer;
+    user-select:none;
+}
+
+.red{
+    color:red;
+}
+
+.center{
+    text-align:center;
+    font-size:28px;
+}
+
+.bottom{
+    transform:rotate(180deg);
+}
+
+.disabled{
+    opacity:0.4;
+    pointer-events:none;
+}
+
+.controls{
+    padding:15px;
+    display:flex;
+    justify-content:center;
+    gap:10px;
+    flex-wrap:wrap;
+}
+
+button{
+    padding:12px 20px;
+    border:none;
+    border-radius:8px;
+    font-weight:bold;
+    cursor:pointer;
+}
+
+.join{
+    background:var(--blue);
+    color:white;
+}
+
+.start{
+    background:var(--green);
+    color:white;
+}
+
+.reset{
+    background:var(--red);
+    color:white;
+}
+
+#trump{
+    font-size:28px;
+}
+</style>
 </head>
+
 <body>
 
-    <div class="game-header">
-        <div id="p1-score">P1: 0</div>
-        <div id="trump-val" style="font-size: 24px; background: rgba(255,255,255,0.1); padding: 5px 15px; border-radius: 15px;">🃏</div>
-        <div id="p2-score">P2: 0</div>
-    </div>
-    <div class="status-bar" id="status">Setup Required</div>
-
-    <div id="game-world">
-        <div class="hand" id="opp-hand"></div>
-        <div id="table">
-            <div id="slot-p2" class="play-slot"></div>
-            <div id="slot-p1" class="play-slot"></div>
-        </div>
-        <div class="hand" id="my-hand"></div>
+<div class="header">
+    <div class="score-box">
+        P1
+        <div class="score" id="scoreP1">0</div>
     </div>
 
-    <div id="overlay-init" class="overlay">
-        <h1 style="color:var(--gold); margin-bottom: 10px;">Tulasi Cards</h1>
-        <div id="create-view">
-            <button class="btn btn-gold" onclick="initRoom()">CREATE PRIVATE GAME</button>
-        </div>
-        <div id="share-view" style="display:none;">
-            <p style="margin-bottom:10px;">Room ID: <span id="room-id-display" style="color:var(--gold); font-weight:bold;"></span></p>
-            <button class="btn btn-wa" onclick="shareWhatsApp()">SHARE ON WHATSAPP</button>
-            <hr style="width: 100%; border: 0.5px solid #333; margin: 20px 0;">
-            <p>Select your side:</p>
-            <button class="btn btn-blue" onclick="joinRole(1)">PLAYER 1</button>
-            <button class="btn btn-blue" onclick="joinRole(2)">PLAYER 2</button>
-        </div>
+    <div id="trump">🃏</div>
+
+    <div class="score-box">
+        P2
+        <div class="score" id="scoreP2">0</div>
+    </div>
+</div>
+
+<div id="status">Connecting...</div>
+
+<div id="game-board">
+
+    <div class="hand" id="p2-hand"></div>
+
+    <div id="table">
+        <div class="slot" id="p2-slot"></div>
+        <div class="slot" id="p1-slot"></div>
     </div>
 
-    <div id="overlay-vote-decider" class="overlay" style="display:none;">
-        <h2>Who chooses Trump?</h2>
-        <p style="margin-bottom:20px; font-size:14px; color:#94a3b8;">Both must pick the same player</p>
-        <button class="btn btn-gold" onclick="castDeciderVote('P1')">VOTE PLAYER 1</button>
-        <button class="btn btn-gold" onclick="castDeciderVote('P2')">VOTE PLAYER 2</button>
-        <p id="vote-feedback" style="margin-top:20px; color:var(--gold); font-weight:bold;"></p>
-    </div>
+    <div class="hand" id="p1-hand"></div>
 
-    <div id="overlay-pick-trump" class="overlay" style="display:none;">
-        <h2 id="picker-title">Select Trump Suit</h2>
-        <p style="margin-bottom:20px;">The opponent is waiting for your choice...</p>
-        <div style="display:flex; flex-wrap: wrap; justify-content:center;">
-            <button class="btn btn-suit" onclick="finalizeTrump('♠')">♠</button>
-            <button class="btn btn-suit" onclick="finalizeTrump('♣')">♣</button>
-            <button class="btn btn-suit" onclick="finalizeTrump('♥')" style="color:var(--red)">♥</button>
-            <button class="btn btn-suit" onclick="finalizeTrump('♦')" style="color:var(--red)">♦</button>
-        </div>
-    </div>
+</div>
 
-    <script>
-        const supabaseUrl = 'https://pftbngrjxxkasossvhwm.supabase.co';
-        const supabaseKey = 'sb_publishable_EmdkxXEgX5XYcvPnKZjdMA_Ff8G9PdC';
-        const client = window.supabase.createClient(supabaseUrl, supabaseKey);
+<div class="controls">
+    <button class="join" onclick="joinGame('P1')">Join Player 1</button>
+    <button class="join" onclick="joinGame('P2')">Join Player 2</button>
 
-        let roomID = new URLSearchParams(window.location.search).get('room');
-        let myRole = null; 
-        let deciderVotes = { P1: null, P2: null };
-        let channel;
+    <button class="start" onclick="startGame()">Start Match</button>
 
-        window.onload = () => {
-            if(roomID) {
-                document.getElementById('create-view').style.display = 'none';
-                document.getElementById('share-view').style.display = 'block';
-                document.getElementById('room-id-display').innerText = roomID;
-            }
-        };
+    <button class="reset" onclick="resetGame()">Reset</button>
+</div>
 
-        function initRoom() {
-            roomID = Math.floor(1000 + Math.random() * 9000);
-            const newUrl = window.location.origin + window.location.pathname + '?room=' + roomID;
-            window.history.pushState({}, '', newUrl);
-            document.getElementById('create-view').style.display = 'none';
-            document.getElementById('share-view').style.display = 'block';
-            document.getElementById('room-id-display').innerText = roomID;
+<script>
+
+const SUPABASE_URL = "https://pftbngrjxxkasossvhwm.supabase.co";
+
+const SUPABASE_KEY = "YOUR_SUPABASE_ANON_KEY";
+
+const client = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+);
+
+const ROOM_ID = "global-room";
+
+let myPlayer = null;
+
+const suits = [
+    {symbol:'♠',color:'black'},
+    {symbol:'♣',color:'black'},
+    {symbol:'♥',color:'red'},
+    {symbol:'♦',color:'red'}
+];
+
+const values = ['7','8','9','10','J','Q','K','A'];
+
+let deck = [];
+
+let gameState = {
+    player1Hand: [],
+    player2Hand: [],
+    table: {
+        P1:null,
+        P2:null
+    },
+    scores:{
+        P1:0,
+        P2:0
+    },
+    turn:"P1",
+    trump:"♠"
+};
+
+async function createRoom(){
+
+    const {data} = await client
+        .from("game_rooms")
+        .select("*")
+        .eq("id",ROOM_ID)
+        .single();
+
+    if(!data){
+
+        await client.from("game_rooms").insert({
+            id:ROOM_ID,
+            game_state:gameState
+        });
+
+    }
+
+}
+
+async function loadGame(){
+
+    const {data} = await client
+        .from("game_rooms")
+        .select("*")
+        .eq("id",ROOM_ID)
+        .single();
+
+    if(data){
+
+        gameState = data.game_state;
+
+        renderGame();
+
+    }
+
+}
+
+async function saveGame(){
+
+    await client
+        .from("game_rooms")
+        .update({
+            game_state:gameState,
+            updated_at:new Date()
+        })
+        .eq("id",ROOM_ID);
+
+}
+
+function subscribeRealtime(){
+
+    client.channel("live-room")
+
+    .on(
+        "postgres_changes",
+        {
+            event:"UPDATE",
+            schema:"public",
+            table:"game_rooms"
+        },
+
+        payload=>{
+
+            gameState = payload.new.game_state;
+
+            renderGame();
+
         }
 
-        function shareWhatsApp() {
-            const link = window.location.href;
-            window.open(`https://wa.me/?text=${encodeURIComponent("Join my card game: " + link)}`, '_blank');
+    )
+
+    .subscribe();
+
+}
+
+function joinGame(player){
+
+    myPlayer = player;
+
+    updateStatus("You joined as " + player);
+
+    renderGame();
+
+}
+
+function generateDeck(){
+
+    deck = [];
+
+    suits.forEach(s=>{
+
+        values.forEach(v=>{
+
+            deck.push({
+                val:v,
+                suit:s.symbol,
+                color:s.color
+            });
+
+        });
+
+    });
+
+    for(let i=deck.length-1;i>0;i--){
+
+        const j=Math.floor(Math.random()*(i+1));
+
+        [deck[i],deck[j]]=[deck[j],deck[i]];
+
+    }
+
+}
+
+async function startGame(){
+
+    generateDeck();
+
+    gameState.player1Hand = deck.splice(0,8);
+
+    gameState.player2Hand = deck.splice(0,8);
+
+    gameState.turn = "P1";
+
+    gameState.table = {
+        P1:null,
+        P2:null
+    };
+
+    gameState.scores = {
+        P1:0,
+        P2:0
+    };
+
+    const randomSuit =
+        suits[Math.floor(Math.random()*4)];
+
+    gameState.trump = randomSuit.symbol;
+
+    await saveGame();
+
+    renderGame();
+
+}
+
+async function playCard(player,index){
+
+    if(player !== myPlayer) return;
+
+    if(gameState.turn !== player) return;
+
+    let hand =
+        player==="P1"
+        ? gameState.player1Hand
+        : gameState.player2Hand;
+
+    const played = hand.splice(index,1)[0];
+
+    gameState.table[player] = played;
+
+    gameState.turn =
+        player==="P1"
+        ? "P2"
+        : "P1";
+
+    if(gameState.table.P1 && gameState.table.P2){
+
+        setTimeout(async()=>{
+
+            resolveRound();
+
+            await saveGame();
+
+            renderGame();
+
+        },800);
+
+    }
+
+    await saveGame();
+
+    renderGame();
+
+}
+
+function resolveRound(){
+
+    const winner =
+        Math.random()>0.5
+        ? "P1"
+        : "P2";
+
+    gameState.scores[winner]++;
+
+    gameState.turn = winner;
+
+    gameState.table = {
+        P1:null,
+        P2:null
+    };
+
+    if(
+        gameState.player1Hand.length===0 &&
+        gameState.player2Hand.length===0
+    ){
+
+        let msg = "";
+
+        if(gameState.scores.P1 > gameState.scores.P2){
+
+            msg = "Player 1 Wins";
+
+        }else if(gameState.scores.P2 > gameState.scores.P1){
+
+            msg = "Player 2 Wins";
+
+        }else{
+
+            msg = "Match Draw";
+
         }
 
-        function joinRole(num) {
-            myRole = `P${num}`;
-            document.getElementById('overlay-init').style.display = 'none';
-            document.getElementById('overlay-vote-decider').style.display = 'flex';
-            connectRealtime();
+        updateStatus(msg);
+
+    }
+
+}
+
+function renderGame(){
+
+    renderHand(
+        "p1-hand",
+        gameState.player1Hand,
+        "P1"
+    );
+
+    renderHand(
+        "p2-hand",
+        gameState.player2Hand,
+        "P2"
+    );
+
+    renderTable();
+
+    document.getElementById("scoreP1").innerText =
+        gameState.scores.P1;
+
+    document.getElementById("scoreP2").innerText =
+        gameState.scores.P2;
+
+    document.getElementById("trump").innerText =
+        gameState.trump;
+
+    updateStatus(
+        gameState.turn + "'s turn"
+    );
+
+}
+
+function renderHand(container,hand,player){
+
+    const box = document.getElementById(container);
+
+    box.innerHTML = "";
+
+    hand.forEach((card,index)=>{
+
+        const div = document.createElement("div");
+
+        div.className = "card " + card.color;
+
+        if(player !== myPlayer){
+
+            div.classList.add("disabled");
+
         }
 
-        function connectRealtime() {
-            channel = client.channel(`gameroom_${roomID}`);
-            channel.on('broadcast', { event: 'decider_vote' }, ({ payload }) => {
-                deciderVotes[payload.from] = payload.vote;
-                processDecider();
-            }).on('broadcast', { event: 'trump_selected' }, ({ payload }) => {
-                applyTrump(payload.suit);
-            }).subscribe();
-        }
+        div.innerHTML = `
+            <div>${card.val}</div>
+            <div class="center">${card.suit}</div>
+            <div class="bottom">${card.val}</div>
+        `;
 
-        function castDeciderVote(target) {
-            deciderVotes[myRole] = target;
-            channel.send({ type: 'broadcast', event: 'decider_vote', payload: { from: myRole, vote: target } });
-            processDecider();
-        }
+        div.onclick = ()=>playCard(player,index);
 
-        function processDecider() {
-            const fb = document.getElementById('vote-feedback');
-            if (deciderVotes.P1 && deciderVotes.P2) {
-                if (deciderVotes.P1 === deciderVotes.P2) {
-                    const winner = deciderVotes.P1;
-                    document.getElementById('overlay-vote-decider').style.display = 'none';
-                    
-                    if (myRole === winner) {
-                        document.getElementById('overlay-pick-trump').style.display = 'flex';
-                    } else {
-                        document.getElementById('status').innerText = `Waiting for ${winner} to pick Trump...`;
-                    }
-                } else {
-                    fb.innerText = "Votes Mismatch! Try again.";
-                    deciderVotes = { P1: null, P2: null };
-                }
-            } else {
-                fb.innerText = "Waiting for other player's vote...";
-            }
-        }
+        box.appendChild(div);
 
-        function finalizeTrump(suit) {
-            channel.send({ type: 'broadcast', event: 'trump_selected', payload: { suit: suit } });
-            applyTrump(suit);
-        }
+    });
 
-        function applyTrump(suit) {
-            document.getElementById('overlay-pick-trump').style.display = 'none';
-            document.getElementById('trump-val').innerText = suit;
-            document.getElementById('status').innerText = "Trump Selected! Game Start.";
-            // Add your card dealing logic here
-        }
-    </script>
+}
+
+function renderTable(){
+
+    document.getElementById("p1-slot").innerHTML = "";
+
+    document.getElementById("p2-slot").innerHTML = "";
+
+    if(gameState.table.P1){
+
+        showTableCard(
+            "p1-slot",
+            gameState.table.P1
+        );
+
+    }
+
+    if(gameState.table.P2){
+
+        showTableCard(
+            "p2-slot",
+            gameState.table.P2
+        );
+
+    }
+
+}
+
+function showTableCard(slot,card){
+
+    const div = document.createElement("div");
+
+    div.className = "card " + card.color;
+
+    div.innerHTML = `
+        <div>${card.val}</div>
+        <div class="center">${card.suit}</div>
+        <div class="bottom">${card.val}</div>
+    `;
+
+    document.getElementById(slot).appendChild(div);
+
+}
+
+async function resetGame(){
+
+    gameState = {
+        player1Hand: [],
+        player2Hand: [],
+        table:{
+            P1:null,
+            P2:null
+        },
+        scores:{
+            P1:0,
+            P2:0
+        },
+        turn:"P1",
+        trump:"🃏"
+    };
+
+    await saveGame();
+
+    renderGame();
+
+}
+
+function updateStatus(text){
+
+    document.getElementById("status").innerText = text;
+
+}
+
+createRoom();
+
+subscribeRealtime();
+
+loadGame();
+
+</script>
+
 </body>
 </html>
