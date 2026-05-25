@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Card Game - Mobile Online Voting Version with Chat</title>
+    <title>Card Game - Secure Online Multiplayer</title>
     
     <!-- SUPABASE REALTIME SDK -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
@@ -135,7 +135,6 @@
         .slot-title { font-size: 10px; color: #bdc3c7; text-transform: uppercase; margin-bottom: 4px; }
         .card-holder { width: 62px; height: 88px; display: flex; justify-content: center; align-items: center; }
 
-        /* Mobile Optimized Cards */
         .card { 
             width: 62px; 
             height: 88px; 
@@ -166,20 +165,20 @@
             border: 1px solid #fff; 
         }
 
-        /* Mobile Responsive Overlays & Buttons */
+        /* Modals and Multi-voting panels */
         .modal-step { 
             display: none; 
             background: #1a252f; 
             border: 2px solid var(--gold); 
             border-radius: 12px; 
-            padding: 12px; 
+            padding: 15px; 
             margin: 8px 0; 
             width: 100%; 
             max-width: 600px; 
             text-align: center; 
             box-shadow: 0 4px 15px rgba(0,0,0,0.4);
         }
-        .modal-step h3 { font-size: 1.1rem; margin-bottom: 4px; }
+        .modal-step h3 { font-size: 1.1rem; margin-bottom: 8px; }
         
         .btn { 
             border: none; 
@@ -200,14 +199,12 @@
         .active-turn { border: 2px solid var(--gold); background: rgba(241, 196, 15, 0.05); }
         .trump-reveal-box { background: var(--gold); color: black; font-weight: bold; padding: 4px 12px; border-radius: 20px; font-size: 12px; display: inline-block; }
 
-        .vote-flex-container { display: flex; justify-content: space-around; gap: 10px; border: 1px solid #444; padding: 8px; border-radius: 8px; margin-top: 8px; }
-        .vote-column { flex: 1; display: flex; flex-direction: column; gap: 4px; }
-        .vote-column p { font-size: 12px; margin-bottom: 2px; }
-        .vote-column .btn { padding: 8px; font-size: 11px; margin: 2px 0; }
+        .vote-panel-box { background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; margin-top: 8px; }
+        .vote-panel-box p { font-size: 13px; margin-bottom: 8px; color: #bdc3c7; }
+        .vote-row { display: flex; justify-content: center; gap: 10px; }
+        .vote-row .btn { flex: 1; max-width: 150px; }
 
-        /* =========================================
-           LIVE CHAT BOX INTERFACE STYLE
-        ========================================= */
+        /* LIVE CHAT BOX INTERFACE STYLE */
         #chat-widget {
             width: 100%;
             max-width: 600px;
@@ -249,38 +246,12 @@
             max-width: 85%;
             word-break: break-word;
         }
-        .chat-msg.me {
-            background: var(--blue);
-            align-self: flex-end;
-            color: #fff;
-        }
-        .chat-msg.them {
-            background: #4f5d73;
-            align-self: flex-start;
-            color: #fff;
-        }
-        #chat-input-row {
-            display: flex;
-            border-top: 1px solid #34495e;
-        }
-        #chat-input {
-            flex: 1;
-            border: none;
-            padding: 10px;
-            background: #2c3e50;
-            color: white;
-            font-size: 13px;
-        }
+        .chat-msg.me { background: var(--blue); align-self: flex-end; color: #fff; }
+        .chat-msg.them { background: #4f5d73; align-self: flex-start; color: #fff; }
+        #chat-input-row { display: flex; border-top: 1px solid #34495e; }
+        #chat-input { flex: 1; border: none; padding: 10px; background: #2c3e50; color: white; font-size: 13px; }
         #chat-input:focus { outline: none; }
-        #chat-send-btn {
-            background: var(--green);
-            color: white;
-            border: none;
-            padding: 0 16px;
-            font-weight: bold;
-            font-size: 13px;
-            cursor: pointer;
-        }
+        #chat-send-btn { background: var(--green); color: white; border: none; padding: 0 16px; font-weight: bold; font-size: 13px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -309,26 +280,20 @@
 
     <!-- Phase: Vote for Trump Chooser -->
     <div id="step-trump-voter-select" class="modal-step">
-        <h3>Who selects Trump Card?</h3>
-        <div class="vote-flex-container">
-            <div class="vote-column" id="vote-zone-p1">
-                <p>P1 Vote:</p>
-                <button class="btn btn-blue" id="tv1-p1" onclick="handleTrumpVoteClick('P1')">Player 1</button>
-                <button class="btn btn-blue" id="tv1-p2" onclick="handleTrumpVoteClick('P2')">Player 2</button>
-            </div>
-            <div style="border-left: 1px solid #444;"></div>
-            <div class="vote-column" id="vote-zone-p2">
-                <p>P2 Vote:</p>
-                <button class="btn btn-blue" id="tv2-p1" onclick="handleTrumpVoteClick('P1')">Player 1</button>
-                <button class="btn btn-blue" id="tv2-p2" onclick="handleTrumpVoteClick('P2')">Player 2</button>
+        <h3>Who should select the Trump Card?</h3>
+        <div class="vote-panel-box">
+            <p id="trump-vote-status-msg">Cast your vote:</p>
+            <div class="vote-row">
+                <button class="btn btn-blue" id="tv-vote-p1" onclick="handleTrumpVoteClick('P1')">Player 1</button>
+                <button class="btn btn-blue" id="tv-vote-p2" onclick="handleTrumpVoteClick('P2')">Player 2</button>
             </div>
         </div>
-        <p id="trump-vote-error" style="color:var(--red); font-size:12px; margin-top:5px; display:none;">Votes mismatch! Retrying...</p>
+        <p id="trump-vote-error" style="color:var(--red); font-size:12px; margin-top:5px; display:none;">Votes mismatch! Retrying round...</p>
     </div>
 
     <!-- Phase 1: Select Trump Category -->
     <div id="step-trump-select" class="modal-step">
-        <h3>Player <span id="opty-player-num">X</span>: Select Trump</h3>
+        <h3>Player <span id="opty-player-num">X</span> is selecting Trump</h3>
         <div id="trump-suit-buttons" style="display:none; justify-content:center; gap:6px; margin-top:8px;">
             <button class="btn btn-suit" onclick="handleTrumpSuitSelection('♠')">♠</button>
             <button class="btn btn-suit" onclick="handleTrumpSuitSelection('♣')">♣</button>
@@ -340,21 +305,15 @@
 
     <!-- Phase 2: Start Game Turn Sync -->
     <div id="step-start-verify" class="modal-step">
-        <h3>Who Starts the Game?</h3>
-        <div class="vote-flex-container">
-            <div class="vote-column" id="start-zone-p1">
-                <p>P1 Selects:</p>
-                <button class="btn btn-blue" id="v1-p1" onclick="handleStartVoteClick('P1')">P1</button>
-                <button class="btn btn-blue" id="v1-p2" onclick="handleStartVoteClick('P2')">P2</button>
-            </div>
-            <div style="border-left: 1px solid #444;"></div>
-            <div class="vote-column" id="start-zone-p2">
-                <p>P2 Selects:</p>
-                <button class="btn btn-blue" id="v2-p1" onclick="handleStartVoteClick('P1')">P1</button>
-                <button class="btn btn-blue" id="v2-p2" onclick="handleStartVoteClick('P2')">P2</button>
+        <h3>Who goes first?</h3>
+        <div class="vote-panel-box">
+            <p id="start-vote-status-msg">Cast your vote:</p>
+            <div class="vote-row">
+                <button class="btn btn-blue" id="sv-vote-p1" onclick="handleStartVoteClick('P1')">Player 1</button>
+                <button class="btn btn-blue" id="sv-vote-p2" onclick="handleStartVoteClick('P2')">Player 2</button>
             </div>
         </div>
-        <p id="start-vote-error" style="color:var(--red); font-size:12px; margin-top:5px; display:none;">Selections mismatch! Retrying...</p>
+        <p id="start-vote-error" style="color:var(--red); font-size:12px; margin-top:5px; display:none;">Selections mismatch! Retrying round...</p>
     </div>
 
     <!-- Player 2 Hand -->
@@ -384,20 +343,14 @@
     <!-- Phase 3: Trick Point Agreement Verification -->
     <div id="step-trick-verify" class="modal-step">
         <h3>Verify Trick Winner</h3>
-        <div class="vote-flex-container">
-            <div class="vote-column" id="trick-zone-p1">
-                <p>P1 Claims:</p>
-                <button class="btn btn-blue" id="trick-p1-w1" onclick="handleTrickVoteClick('P1')">P1 Win</button>
-                <button class="btn btn-red" id="trick-p1-w2" onclick="handleTrickVoteClick('P2')">P2 Win</button>
-            </div>
-            <div style="border-left: 1px solid #444;"></div>
-            <div class="vote-column" id="trick-zone-p2">
-                <p>P2 Claims:</p>
-                <button class="btn btn-blue" id="trick-p2-w2" onclick="handleTrickVoteClick('P2')">P2 Win</button>
-                <button class="btn btn-red" id="trick-p2-w1" onclick="handleTrickVoteClick('P1')">P1 Win</button>
+        <div class="vote-panel-box">
+            <p id="trick-vote-status-msg">Who won this turn?</p>
+            <div class="vote-row">
+                <button class="btn btn-blue" id="tk-vote-p1" onclick="handleTrickVoteClick('P1')">P1 Won</button>
+                <button class="btn btn-red" id="tk-vote-p2" onclick="handleTrickVoteClick('P2')">P2 Won</button>
             </div>
         </div>
-        <p id="trick-vote-error" style="color:var(--red); font-size:12px; margin-top:5px; display:none;">Mismatched inputs! Revoting...</p>
+        <p id="trick-vote-error" style="color:var(--red); font-size:12px; margin-top:5px; display:none;">Mismatched choices! Try again...</p>
     </div>
 
     <!-- Live Chat Container UI Block -->
@@ -468,7 +421,6 @@
             }
             document.getElementById('btn-copy-link').addEventListener('click', copyRoomURL);
             
-            // Allow sending chat message by hitting "Enter" on keyboard
             document.getElementById('chat-input').addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') sendChatMessage();
             });
@@ -518,19 +470,22 @@
                 player1Hand = payload.p1Hand;
                 player2Hand = payload.p2Hand;
                 
+                // Reset state
                 document.getElementById('btn-action').style.display = 'none';
                 document.getElementById('trump-display').style.visibility = 'hidden';
                 document.getElementById('p1-slot').innerHTML = '';
                 document.getElementById('p2-slot').innerHTML = '';
                 
+                trumpChooserVotes = { P1: null, P2: null };
+                resetTrumpVoteUIStyles();
+                
                 document.getElementById('step-trump-voter-select').style.display = 'block';
-                disableEnemyInteractionZones();
                 updateStatus("Cards dealt! Choose who picks Trump suit.");
                 renderHands();
             })
             .on('broadcast', { event: 'sync-trump-vote' }, ({ payload }) => {
                 trumpChooserVotes = payload.votes;
-                syncTrumpVoteVisuals();
+                updateTrumpVoteUISignals();
                 evaluateTrumpVoteAgreement();
             })
             .on('broadcast', { event: 'sync-trump-suit' }, ({ payload }) => {
@@ -541,14 +496,16 @@
                 document.getElementById('trump-suit-val').innerText = trumpSuit;
                 document.getElementById('step-trump-select').style.display = 'none';
                 
+                startVotes = { P1: null, P2: null };
+                resetStartVoteUIStyles();
+                
                 document.getElementById('step-start-verify').style.display = 'block';
-                disableEnemyInteractionZones();
                 updateStatus("Trump suit locked! Select who throws first.");
                 renderHands();
             })
             .on('broadcast', { event: 'sync-start-vote' }, ({ payload }) => {
                 startVotes = payload.votes;
-                syncStartVoteVisuals();
+                updateStartVoteUISignals();
                 evaluateStartVoteAgreement();
             })
             .on('broadcast', { event: 'sync-card-play' }, ({ payload }) => {
@@ -566,8 +523,9 @@
                 if (tableCards.P1 && tableCards.P2) {
                     currentTurn = null;
                     renderHands();
+                    trickVotes = { P1: null, P2: null };
+                    resetTrickVoteUIStyles();
                     document.getElementById('step-trick-verify').style.display = 'block';
-                    disableEnemyInteractionZones();
                     updateStatus("Cards played! Confirm the winner below.");
                 } else {
                     updateStatus(`It is now turn: ${currentTurn}`);
@@ -575,7 +533,7 @@
             })
             .on('broadcast', { event: 'sync-trick-vote' }, ({ payload }) => {
                 trickVotes = payload.votes;
-                syncTrickVoteVisuals();
+                updateTrickVoteUISignals();
                 evaluateTrickVoteAgreement();
             })
             .subscribe((status) => {
@@ -588,21 +546,19 @@
         }
 
         /* =========================================
-           LIVE TEXT CHAT LOGIC IMPLEMENTATION
+           LIVE TEXT CHAT LOGIC 
         ========================================= */
         function sendChatMessage() {
             const inputEl = document.getElementById('chat-input');
             const cleanText = inputEl.value.trim();
             if (!cleanText || !channel) return;
 
-            // Broadcast message out to peer
             channel.send({
                 type: 'broadcast',
                 event: 'chat-msg',
                 payload: { text: cleanText, sender: myRole }
             });
 
-            // Display locally immediately
             appendChatDisplay(cleanText, 'me', myRole);
             inputEl.value = '';
         }
@@ -613,7 +569,7 @@
             element.className = `chat-msg ${matchClass}`;
             element.innerHTML = `<span style="font-size:10px; opacity:0.7; display:block;">${senderName}</span>${text}`;
             logBox.appendChild(element);
-            logBox.scrollTop = logBox.scrollHeight; // Autoscroll to bottom
+            logBox.scrollTop = logBox.scrollHeight;
         }
 
         function appendSystemMessage(text) {
@@ -638,23 +594,179 @@
         }
 
         /* =========================================
-           MOBILE SECURITY LAYERS
+           FIXED STEP 1: TRUMP SELECTION VOTING
         ========================================= */
-        function disableEnemyInteractionZones() {
-            const opponentRole = myRole === 'P1' ? 'P2' : 'P1';
+        function handleTrumpVoteClick(votedFor) {
+            // Register local player's selection into their respective slot
+            trumpChooserVotes[myRole] = votedFor;
             
-            const vBlock = document.getElementById(`vote-zone-${opponentRole.toLowerCase()}`);
-            if(vBlock) vBlock.style.pointerEvents = 'none';
+            // Broadcast choices to peer
+            channel.send({ type: 'broadcast', event: 'sync-trump-vote', payload: { votes: trumpChooserVotes } });
+            
+            updateTrumpVoteUISignals();
+            evaluateTrumpVoteAgreement();
+        }
 
-            const sBlock = document.getElementById(`start-zone-${opponentRole.toLowerCase()}`);
-            if(sBlock) sBlock.style.pointerEvents = 'none';
+        function resetTrumpVoteUIStyles() {
+            document.getElementById('tv-vote-p1').style.background = 'var(--blue)';
+            document.getElementById('tv-vote-p2').style.background = 'var(--blue)';
+            document.getElementById('trump-vote-status-msg').innerText = "Cast your vote:";
+        }
 
-            const tBlock = document.getElementById(`trick-zone-${opponentRole.toLowerCase()}`);
-            if(tBlock) tBlock.style.pointerEvents = 'none';
+        function updateTrumpVoteUISignals() {
+            const myVote = trumpChooserVotes[myRole];
+            // Highlight my chosen button locally
+            document.getElementById('tv-vote-p1').style.background = myVote === 'P1' ? 'var(--green)' : 'var(--blue)';
+            document.getElementById('tv-vote-p2').style.background = myVote === 'P2' ? 'var(--green)' : 'var(--blue)';
+
+            // Status message updates showing who submitted their votes
+            let statusStr = "Waiting for selections...";
+            if (trumpChooserVotes.P1 && !trumpChooserVotes.P2) statusStr = "Player 1 has voted. Waiting for Player 2...";
+            if (!trumpChooserVotes.P1 && trumpChooserVotes.P2) statusStr = "Player 2 has voted. Waiting for Player 1...";
+            if (trumpChooserVotes.P1 && trumpChooserVotes.P2) statusStr = "Processing responses...";
+            document.getElementById('trump-vote-status-msg').innerText = statusStr;
+        }
+
+        function evaluateTrumpVoteAgreement() {
+            if (trumpChooserVotes.P1 && trumpChooserVotes.P2) {
+                if (trumpChooserVotes.P1 === trumpChooserVotes.P2) {
+                    chosenTrumpChooser = trumpChooserVotes.P1; 
+                    document.getElementById('step-trump-voter-select').style.display = 'none';
+                    document.getElementById('trump-vote-error').style.display = 'none';
+                    
+                    document.getElementById('step-trump-select').style.display = 'block';
+                    document.getElementById('opty-player-num').innerText = chosenTrumpChooser === 'P1' ? '1' : '2';
+
+                    if (myRole === chosenTrumpChooser) {
+                        document.getElementById('trump-suit-buttons').style.display = 'flex';
+                        document.getElementById('trump-wait-message').style.display = 'none';
+                    } else {
+                        document.getElementById('trump-suit-buttons').style.display = 'none';
+                        document.getElementById('trump-wait-message').style.display = 'block';
+                    }
+                    updateStatus(`Player ${chosenTrumpChooser === 'P1' ? '1' : '2'} is choosing Trump card...`);
+                } else {
+                    // Mismatch! Flash error and reset 
+                    document.getElementById('trump-vote-error').style.display = 'block';
+                    trumpChooserVotes = { P1: null, P2: null };
+                    setTimeout(() => {
+                        document.getElementById('trump-vote-error').style.display = 'none';
+                        resetTrumpVoteUIStyles();
+                    }, 1500);
+                }
+            }
         }
 
         /* =========================================
-           GAME LOGIC - CORE ENGINE
+           FIXED STEP 2: STARTING PLAYER VOTING
+        ========================================= */
+        function handleStartVoteClick(votedFor) {
+            startVotes[myRole] = votedFor;
+            channel.send({ type: 'broadcast', event: 'sync-start-vote', payload: { votes: startVotes } });
+            updateStartVoteUISignals();
+            evaluateStartVoteAgreement();
+        }
+
+        function resetStartVoteUIStyles() {
+            document.getElementById('sv-vote-p1').style.background = 'var(--blue)';
+            document.getElementById('sv-vote-p2').style.background = 'var(--blue)';
+            document.getElementById('start-vote-status-msg').innerText = "Cast your vote:";
+        }
+
+        function updateStartVoteUISignals() {
+            const myVote = startVotes[myRole];
+            document.getElementById('sv-vote-p1').style.background = myVote === 'P1' ? 'var(--green)' : 'var(--blue)';
+            document.getElementById('sv-vote-p2').style.background = myVote === 'P2' ? 'var(--green)' : 'var(--blue)';
+
+            let statusStr = "Waiting for selections...";
+            if (startVotes.P1 && !startVotes.P2) statusStr = "Player 1 has voted. Waiting for Player 2...";
+            if (!startVotes.P1 && startVotes.P2) statusStr = "Player 2 has voted. Waiting for Player 1...";
+            document.getElementById('start-vote-status-msg').innerText = statusStr;
+        }
+
+        function evaluateStartVoteAgreement() {
+            if (startVotes.P1 && startVotes.P2) {
+                if (startVotes.P1 === startVotes.P2) {
+                    currentTurn = startVotes.P1;
+                    document.getElementById('step-start-verify').style.display = 'none';
+                    document.getElementById('start-vote-error').style.display = 'none';
+                    updateStatus(`Match started! It's ${currentTurn}'s turn.`);
+                    renderHands();
+                } else {
+                    document.getElementById('start-vote-error').style.display = 'block';
+                    startVotes = { P1: null, P2: null };
+                    setTimeout(() => {
+                        document.getElementById('start-vote-error').style.display = 'none';
+                        resetStartVoteUIStyles();
+                    }, 1500);
+                }
+            }
+        }
+
+        /* =========================================
+           FIXED STEP 3: TRICK WINNER VOTING
+        ========================================= */
+        function handleTrickVoteClick(claimedWinner) {
+            trickVotes[myRole] = claimedWinner;
+            channel.send({ type: 'broadcast', event: 'sync-trick-vote', payload: { votes: trickVotes } });
+            updateTrickVoteUISignals();
+            evaluateTrickVoteAgreement();
+        }
+
+        function resetTrickVoteUIStyles() {
+            document.getElementById('tk-vote-p1').style.background = 'var(--blue)';
+            document.getElementById('tk-vote-p2').style.background = 'var(--red)';
+            document.getElementById('trick-vote-status-msg').innerText = "Who won this turn?";
+        }
+
+        function updateTrickVoteUISignals() {
+            const myVote = trickVotes[myRole];
+            document.getElementById('tk-vote-p1').style.background = myVote === 'P1' ? 'var(--green)' : 'var(--blue)';
+            document.getElementById('tk-vote-p2').style.background = myVote === 'P2' ? 'var(--green)' : 'var(--red)';
+
+            let statusStr = "Waiting for confirmations...";
+            if (trickVotes.P1 && !trickVotes.P2) statusStr = "Player 1 claimed winner. Waiting for Player 2...";
+            if (!trickVotes.P1 && trickVotes.P2) statusStr = "Player 2 claimed winner. Waiting for Player 1...";
+            document.getElementById('trick-vote-status-msg').innerText = statusStr;
+        }
+
+        function evaluateTrickVoteAgreement() {
+            if (trickVotes.P1 && trickVotes.P2) {
+                if (trickVotes.P1 === trickVotes.P2) {
+                    const finalWinner = trickVotes.P1;
+                    
+                    if (finalWinner === 'P1') scoreP1++; else scoreP2++;
+                    document.getElementById('score-p1').innerText = scoreP1;
+                    document.getElementById('score-p2').innerText = scoreP2;
+
+                    document.getElementById('p1-slot').innerHTML = '';
+                    document.getElementById('p2-slot').innerHTML = '';
+                    tableCards = { P1: null, P2: null };
+                    trickVotes = { P1: null, P2: null };
+
+                    document.getElementById('step-trick-verify').style.display = 'none';
+                    document.getElementById('trick-vote-error').style.display = 'none';
+
+                    if (player1Hand.length === 0 && player2Hand.length === 0) {
+                        handleMatchConclusion();
+                    } else {
+                        currentTurn = finalWinner; 
+                        updateStatus(`Trick accepted! Winner (${currentTurn}) plays next.`);
+                        renderHands();
+                    }
+                } else {
+                    document.getElementById('trick-vote-error').style.display = 'block';
+                    trickVotes = { P1: null, P2: null };
+                    setTimeout(() => {
+                        document.getElementById('trick-vote-error').style.display = 'none';
+                        resetTrickVoteUIStyles();
+                    }, 1500);
+                }
+            }
+        }
+
+        /* =========================================
+           GAME DECK DESTRUCTION & ENGINE CORE
         ========================================= */
         function startNewMatch() {
             if (myRole !== 'P1') return;
@@ -691,49 +803,6 @@
             appendSystemMessage("A new match has begun!");
         }
 
-        function handleTrumpVoteClick(votedFor) {
-            trumpChooserVotes[myRole] = votedFor;
-            channel.send({ type: 'broadcast', event: 'sync-trump-vote', payload: { votes: trumpChooserVotes } });
-            syncTrumpVoteVisuals();
-            evaluateTrumpVoteAgreement();
-        }
-
-        function syncTrumpVoteVisuals() {
-            document.getElementById('tv1-p1').style.background = trumpChooserVotes.P1 === 'P1' ? 'var(--green)' : 'var(--blue)';
-            document.getElementById('tv1-p2').style.background = trumpChooserVotes.P1 === 'P2' ? 'var(--green)' : 'var(--blue)';
-            document.getElementById('tv2-p1').style.background = trumpChooserVotes.P2 === 'P1' ? 'var(--green)' : 'var(--blue)';
-            document.getElementById('tv2-p2').style.background = trumpChooserVotes.P2 === 'P2' ? 'var(--green)' : 'var(--blue)';
-        }
-
-        function evaluateTrumpVoteAgreement() {
-            if (trumpChooserVotes.P1 && trumpChooserVotes.P2) {
-                if (trumpChooserVotes.P1 === trumpChooserVotes.P2) {
-                    chosenTrumpChooser = trumpChooserVotes.P1; 
-                    document.getElementById('step-trump-voter-select').style.display = 'none';
-                    document.getElementById('trump-vote-error').style.display = 'none';
-                    
-                    document.getElementById('step-trump-select').style.display = 'block';
-                    document.getElementById('opty-player-num').innerText = chosenTrumpChooser === 'P1' ? '1' : '2';
-
-                    if (myRole === chosenTrumpChooser) {
-                        document.getElementById('trump-suit-buttons').style.display = 'flex';
-                        document.getElementById('trump-wait-message').style.display = 'none';
-                    } else {
-                        document.getElementById('trump-suit-buttons').style.display = 'none';
-                        document.getElementById('trump-wait-message').style.display = 'block';
-                    }
-                    updateStatus(`Player ${chosenTrumpChooser === 'P1' ? '1' : '2'} choosing Trump suit...`);
-                } else {
-                    document.getElementById('trump-vote-error').style.display = 'block';
-                    trumpChooserVotes = { P1: null, P2: null };
-                    setTimeout(() => {
-                        document.getElementById('trump-vote-error').style.display = 'none';
-                        syncTrumpVoteVisuals();
-                    }, 1200);
-                }
-            }
-        }
-
         function handleTrumpSuitSelection(chosenSuit) {
             if (myRole !== chosenTrumpChooser) return;
 
@@ -746,39 +815,6 @@
                 event: 'sync-trump-suit',
                 payload: { suit: trumpSuit, p1Hand: player1Hand, p2Hand: player2Hand }
             });
-        }
-
-        function handleStartVoteClick(votedFor) {
-            startVotes[myRole] = votedFor;
-            channel.send({ type: 'broadcast', event: 'sync-start-vote', payload: { votes: startVotes } });
-            syncStartVoteVisuals();
-            evaluateStartVoteAgreement();
-        }
-
-        function syncStartVoteVisuals() {
-            document.getElementById('v1-p1').style.background = startVotes.P1 === 'P1' ? 'var(--green)' : 'var(--blue)';
-            document.getElementById('v1-p2').style.background = startVotes.P1 === 'P2' ? 'var(--green)' : 'var(--blue)';
-            document.getElementById('v2-p1').style.background = startVotes.P2 === 'P1' ? 'var(--green)' : 'var(--blue)';
-            document.getElementById('v2-p2').style.background = startVotes.P2 === 'P2' ? 'var(--green)' : 'var(--blue)';
-        }
-
-        function evaluateStartVoteAgreement() {
-            if (startVotes.P1 && startVotes.P2) {
-                if (startVotes.P1 === startVotes.P2) {
-                    currentTurn = startVotes.P1;
-                    document.getElementById('step-start-verify').style.display = 'none';
-                    document.getElementById('start-vote-error').style.display = 'none';
-                    updateStatus(`Match started! ${currentTurn}'s turn.`);
-                    renderHands();
-                } else {
-                    document.getElementById('start-vote-error').style.display = 'block';
-                    startVotes = { P1: null, P2: null };
-                    setTimeout(() => {
-                        document.getElementById('start-vote-error').style.display = 'none';
-                        syncStartVoteVisuals();
-                    }, 1200);
-                }
-            }
         }
 
         function processCardExecution(player, index) {
@@ -820,64 +856,6 @@
                     slot.appendChild(cardDiv);
                 }
             });
-        }
-
-        function handleTrickVoteClick(claimedWinner) {
-            trickVotes[myRole] = claimedWinner;
-            channel.send({ type: 'broadcast', event: 'sync-trick-vote', payload: { votes: trickVotes } });
-            syncTrickVoteVisuals();
-            evaluateTrickVoteAgreement();
-        }
-
-        function syncTrickVoteVisuals() {
-            document.getElementById('trick-p1-w1').style.background = trickVotes.P1 === 'P1' ? 'var(--green)' : 'var(--blue)';
-            document.getElementById('trick-p1-w2').style.background = trickVotes.P1 === 'P2' ? 'var(--green)' : 'var(--red)';
-            document.getElementById('trick-p2-w2').style.background = trickVotes.P2 === 'P2' ? 'var(--green)' : 'var(--blue)';
-            document.getElementById('trick-p2-w1').style.background = trickVotes.P2 === 'P1' ? 'var(--green)' : 'var(--red)';
-        }
-
-        function evaluateTrickVoteAgreement() {
-            if (trickVotes.P1 && trickVotes.P2) {
-                if (trickVotes.P1 === trickVotes.P2) {
-                    const finalWinner = trickVotes.P1;
-                    
-                    if (finalWinner === 'P1') scoreP1++; else scoreP2++;
-                    document.getElementById('score-p1').innerText = scoreP1;
-                    document.getElementById('score-p2').innerText = scoreP2;
-
-                    document.getElementById('p1-slot').innerHTML = '';
-                    document.getElementById('p2-slot').innerHTML = '';
-                    tableCards = { P1: null, P2: null };
-                    trickVotes = { P1: null, P2: null };
-
-                    document.getElementById('step-trick-verify').style.display = 'none';
-                    document.getElementById('trick-vote-error').style.display = 'none';
-                    
-                    resetTrickButtonStyles();
-
-                    if (player1Hand.length === 0 && player2Hand.length === 0) {
-                        handleMatchConclusion();
-                    } else {
-                        currentTurn = finalWinner; 
-                        updateStatus(`Trick accepted! Winner (${currentTurn}) plays next.`);
-                        renderHands();
-                    }
-                } else {
-                    document.getElementById('trick-vote-error').style.display = 'block';
-                    trickVotes = { P1: null, P2: null };
-                    setTimeout(() => {
-                        document.getElementById('trick-vote-error').style.display = 'none';
-                        resetTrickButtonStyles();
-                    }, 1200);
-                }
-            }
-        }
-
-        function resetTrickButtonStyles() {
-            document.getElementById('trick-p1-w1').style.background = 'var(--blue)';
-            document.getElementById('trick-p1-w2').style.background = 'var(--red)';
-            document.getElementById('trick-p2-w2').style.background = 'var(--blue)';
-            document.getElementById('trick-p2-w1').style.background = 'var(--red)';
         }
 
         function handleMatchConclusion() {
