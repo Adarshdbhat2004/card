@@ -3,18 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Realtime Multiplayer Card Game</title>
+<title>Online Multiplayer Card Game</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
+
 :root{
     --bg:#111827;
     --panel:#1f2937;
     --gold:#facc15;
     --green:#22c55e;
-    --blue:#3b82f6;
     --red:#ef4444;
+    --blue:#3b82f6;
 }
 
 *{
@@ -28,121 +29,79 @@ body{
     background:var(--bg);
     color:white;
     min-height:100vh;
-    display:flex;
-    flex-direction:column;
-}
-
-.top{
-    background:#000;
     padding:15px;
-    text-align:center;
-    border-bottom:2px solid var(--blue);
 }
 
-h1{
-    font-size:22px;
-}
-
-#roomInfo{
-    margin-top:8px;
-    color:var(--gold);
-}
-
-.controls{
-    padding:15px;
-    display:flex;
-    flex-wrap:wrap;
-    gap:10px;
-    justify-content:center;
+.top-panel{
     background:var(--panel);
+    padding:15px;
+    border-radius:10px;
+    margin-bottom:15px;
+    text-align:center;
 }
 
 input{
     padding:10px;
     border:none;
     border-radius:6px;
-    width:180px;
+    width:200px;
 }
 
 button{
-    padding:10px 18px;
+    padding:10px 15px;
     border:none;
     border-radius:6px;
     cursor:pointer;
     font-weight:bold;
 }
 
-.create{
+.btn-green{
     background:var(--green);
     color:white;
 }
 
-.join{
+.btn-blue{
     background:var(--blue);
     color:white;
 }
 
-.start{
-    background:var(--gold);
-    color:black;
-}
-
-#status{
-    text-align:center;
-    padding:10px;
-    background:#0f172a;
+.status{
+    margin-top:10px;
     color:var(--gold);
     font-weight:bold;
 }
 
 .board{
-    flex:1;
     display:flex;
     flex-direction:column;
-    justify-content:space-between;
-    padding:10px;
+    gap:15px;
+}
+
+.player-box{
+    background:var(--panel);
+    padding:15px;
+    border-radius:10px;
 }
 
 .hand{
-    min-height:130px;
     display:flex;
-    justify-content:center;
+    gap:10px;
     flex-wrap:wrap;
-    gap:8px;
-    background:rgba(255,255,255,0.05);
-    border-radius:10px;
-    padding:10px;
-}
-
-.table{
-    flex:1;
-    display:flex;
     justify-content:center;
-    align-items:center;
-    gap:50px;
-}
-
-.slot{
-    width:90px;
-    height:130px;
-    border:2px dashed rgba(255,255,255,0.2);
-    border-radius:10px;
-    display:flex;
-    justify-content:center;
-    align-items:center;
+    margin-top:10px;
 }
 
 .card{
-    width:80px;
-    height:120px;
+    width:70px;
+    height:100px;
     background:white;
-    border-radius:10px;
-    padding:8px;
+    border-radius:8px;
+    color:black;
+    padding:5px;
     display:flex;
     flex-direction:column;
     justify-content:space-between;
     font-weight:bold;
-    color:black;
     cursor:pointer;
 }
 
@@ -150,259 +109,338 @@ button{
     color:red;
 }
 
+.black{
+    color:black;
+}
+
 .center{
-    text-align:center;
     font-size:28px;
+    text-align:center;
 }
 
-.bottom{
-    transform:rotate(180deg);
+.table{
+    background:var(--panel);
+    padding:20px;
+    border-radius:10px;
+    display:flex;
+    justify-content:center;
+    gap:40px;
+    min-height:150px;
 }
 
-.disabled{
-    opacity:0.4;
-    pointer-events:none;
+.slot{
+    width:90px;
+    height:120px;
+    border:2px dashed #555;
+    border-radius:8px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
 }
 
 .scoreboard{
     display:flex;
     justify-content:space-around;
-    padding:10px;
-    background:#000;
+    margin-top:10px;
+    font-size:18px;
+    font-weight:bold;
 }
 
-.score{
-    text-align:center;
-}
-
-.score span{
-    color:var(--gold);
-    font-size:24px;
-    display:block;
-}
 </style>
 </head>
 
 <body>
 
-<div class="top">
-    <h1>Realtime Multiplayer Card Game</h1>
-    <div id="roomInfo">No Room Connected</div>
-</div>
+<div class="top-panel">
 
-<div class="controls">
-    <input type="text" id="roomInput" placeholder="Enter Room ID">
+    <h2>ONLINE MULTIPLAYER CARD GAME</h2>
 
-    <button class="create" onclick="createRoom()">
+    <br>
+
+    <input type="text" id="room-id" placeholder="Enter Room ID">
+
+    <button class="btn-green" onclick="createRoom()">
         Create Room
     </button>
 
-    <button class="join" onclick="joinRoom()">
+    <button class="btn-blue" onclick="joinRoom()">
         Join Room
     </button>
 
-    <button class="start" onclick="startGame()">
-        Start Match
+    <br><br>
+
+    <button onclick="choosePlayer('P1')">
+        Join As Player 1
     </button>
-</div>
 
-<div id="status">
-    Waiting for room...
-</div>
+    <button onclick="choosePlayer('P2')">
+        Join As Player 2
+    </button>
 
-<div class="scoreboard">
-    <div class="score">
-        Player 1
-        <span id="score1">0</span>
+    <br><br>
+
+    <button class="btn-green" onclick="startGame()">
+        Start Game
+    </button>
+
+    <div class="status" id="status">
+        Waiting...
     </div>
 
-    <div class="score">
-        Trump
-        <span id="trump">🃏</span>
+    <div class="scoreboard">
+        <div>P1 Score: <span id="p1-score">0</span></div>
+        <div>Turn: <span id="turn-text">-</span></div>
+        <div>P2 Score: <span id="p2-score">0</span></div>
     </div>
 
-    <div class="score">
-        Player 2
-        <span id="score2">0</span>
-    </div>
 </div>
 
 <div class="board">
 
-    <div class="hand" id="opponentHand"></div>
-
-    <div class="table">
-        <div class="slot" id="p2Slot"></div>
-        <div class="slot" id="p1Slot"></div>
+    <div class="player-box">
+        <h3>Player 2 Hand</h3>
+        <div class="hand" id="p2-hand"></div>
     </div>
 
-    <div class="hand" id="myHand"></div>
+    <div class="table">
+
+        <div>
+            <h4>P2 Card</h4>
+            <div class="slot" id="p2-slot"></div>
+        </div>
+
+        <div>
+            <h4>P1 Card</h4>
+            <div class="slot" id="p1-slot"></div>
+        </div>
+
+    </div>
+
+    <div class="player-box">
+        <h3>Player 1 Hand</h3>
+        <div class="hand" id="p1-hand"></div>
+    </div>
 
 </div>
 
 <script>
 
+// ===========================
+// SUPABASE
+// ===========================
+
 const supabaseUrl =
-'https://pftbngrjxxkasossvhwm.supabase.co';
+"https://pftbngrjxxkasossvhwm.supabase.co";
 
 const supabaseKey =
-'sb_publishable_EmdkxXEgX5XYcvPnKZjdMA_Ff8G9PdC';
+"sb_publishable_EmdkxXEgX5XYcvPnKZjdMA_Ff8G9PdC";
 
-const client =
-window.supabase.createClient(
+const client = window.supabase.createClient(
     supabaseUrl,
     supabaseKey
 );
 
+// ===========================
+// VARIABLES
+// ===========================
+
 let roomId = null;
 let myPlayer = null;
-let realtimeChannel = null;
-
-const suits = [
-    {symbol:'♠',color:'black'},
-    {symbol:'♣',color:'black'},
-    {symbol:'♥',color:'red'},
-    {symbol:'♦',color:'red'}
-];
-
-const values =
-['7','8','9','10','J','Q','K','A'];
+let deck = [];
 
 let gameState = {
-    player1: [],
-    player2: [],
-    table: {
+    player1Hand: [],
+    player2Hand: [],
+    tableCards:{
         P1:null,
         P2:null
     },
-    scores: {
+    currentTurn:"P1",
+    scores:{
         P1:0,
         P2:0
-    },
-    turn: 'P1',
-    trump:'♠'
+    }
 };
+
+// ===========================
+// CREATE ROOM
+// ===========================
 
 async function createRoom(){
 
     roomId =
-    document.getElementById(
-        "roomInput"
-    ).value.trim();
+        document.getElementById("room-id")
+        .value.trim();
 
     if(!roomId){
-        alert("Enter room ID");
+        alert("Enter Room ID");
         return;
     }
 
-    myPlayer = 'P1';
+    const { data } = await client
+        .from("game_rooms")
+        .select("*")
+        .eq("id", roomId)
+        .single();
 
-    const {error} =
-    await client
-    .from('game_rooms')
-    .insert({
-        id: roomId,
-        game_state: gameState
-    });
-
-    if(error){
+    if(data){
         alert("Room already exists");
         return;
     }
 
-    connectRealtime();
+    await client
+        .from("game_rooms")
+        .insert({
+            id:roomId,
+            game_state:gameState
+        });
 
-    document.getElementById(
-        "roomInfo"
-    ).innerText =
-    "Room: " + roomId +
-    " | You are Player 1";
+    subscribeRoom();
 
-    updateStatus(
-        "Waiting for Player 2"
-    );
-
+    updateStatus("Room Created");
 }
+
+// ===========================
+// JOIN ROOM
+// ===========================
 
 async function joinRoom(){
 
     roomId =
-    document.getElementById(
-        "roomInput"
-    ).value.trim();
+        document.getElementById("room-id")
+        .value.trim();
 
     if(!roomId){
-        alert("Enter room ID");
+        alert("Enter Room ID");
         return;
     }
 
-    const {data,error} =
-    await client
-    .from('game_rooms')
-    .select("*")
-    .eq("id",roomId)
-    .single();
+    const { data } = await client
+        .from("game_rooms")
+        .select("*")
+        .eq("id", roomId)
+        .single();
 
-    if(error || !data){
-        alert("Room not found");
+    if(!data){
+        alert("Room Not Found");
         return;
     }
 
     gameState = data.game_state;
 
-    myPlayer = 'P2';
+    subscribeRoom();
 
-    connectRealtime();
+    renderEverything();
 
-    render();
-
-    document.getElementById(
-        "roomInfo"
-    ).innerText =
-    "Room: " + roomId +
-    " | You are Player 2";
-
-    updateStatus(
-        "Connected Successfully"
-    );
-
+    updateStatus("Joined Room");
 }
 
-function connectRealtime(){
+// ===========================
+// CHOOSE PLAYER
+// ===========================
 
-    realtimeChannel =
-    client.channel(
-        'room-' + roomId
-    );
+function choosePlayer(player){
 
-    realtimeChannel
+    myPlayer = player;
+
+    updateStatus("You joined as " + player);
+}
+
+// ===========================
+// REALTIME
+// ===========================
+
+function subscribeRoom(){
+
+    client.channel("room-"+roomId)
 
     .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-            event:'UPDATE',
-            schema:'public',
-            table:'game_rooms',
-            filter:'id=eq.' + roomId
+            event:"UPDATE",
+            schema:"public",
+            table:"game_rooms",
+            filter:`id=eq.${roomId}`
         },
 
-        payload=>{
+        payload => {
 
             gameState =
-            payload.new.game_state;
+                payload.new.game_state;
 
-            render();
-
+            renderEverything();
         }
     )
 
     .subscribe();
-
 }
+
+// ===========================
+// SAVE GAME
+// ===========================
+
+async function saveGame(){
+
+    await client
+        .from("game_rooms")
+        .update({
+            game_state:gameState
+        })
+        .eq("id", roomId);
+}
+
+// ===========================
+// START GAME
+// ===========================
+
+async function startGame(){
+
+    generateDeck();
+
+    gameState.player1Hand =
+        deck.splice(0,8);
+
+    gameState.player2Hand =
+        deck.splice(0,8);
+
+    gameState.currentTurn = "P1";
+
+    gameState.tableCards = {
+        P1:null,
+        P2:null
+    };
+
+    gameState.scores = {
+        P1:0,
+        P2:0
+    };
+
+    await saveGame();
+
+    renderEverything();
+
+    updateStatus("Game Started");
+}
+
+// ===========================
+// GENERATE DECK
+// ===========================
 
 function generateDeck(){
 
-    let deck = [];
+    const suits = [
+        {symbol:"♠",color:"black"},
+        {symbol:"♣",color:"black"},
+        {symbol:"♥",color:"red"},
+        {symbol:"♦",color:"red"}
+    ];
+
+    const values = [
+        "7","8","9","10",
+        "J","Q","K","A"
+    ];
+
+    deck = [];
 
     suits.forEach(s=>{
 
@@ -418,332 +456,251 @@ function generateDeck(){
 
     });
 
-    for(
-        let i=deck.length-1;
-        i>0;
-        i--
-    ){
+    for(let i=deck.length-1;i>0;i--){
 
         const j =
-        Math.floor(
-            Math.random()*(i+1)
-        );
+            Math.floor(
+                Math.random()*(i+1)
+            );
 
         [deck[i],deck[j]] =
         [deck[j],deck[i]];
     }
-
-    return deck;
-
 }
 
-async function startGame(){
-
-    if(myPlayer !== 'P1'){
-        alert(
-            "Only Player 1 can start"
-        );
-        return;
-    }
-
-    let deck = generateDeck();
-
-    gameState.player1 =
-    deck.splice(0,8);
-
-    gameState.player2 =
-    deck.splice(0,8);
-
-    gameState.table = {
-        P1:null,
-        P2:null
-    };
-
-    gameState.scores = {
-        P1:0,
-        P2:0
-    };
-
-    gameState.turn = 'P1';
-
-    gameState.trump =
-    suits[
-        Math.floor(Math.random()*4)
-    ].symbol;
-
-    await saveGame();
-
-}
+// ===========================
+// PLAY CARD
+// ===========================
 
 async function playCard(index){
 
-    if(gameState.turn !== myPlayer)
+    if(myPlayer !== gameState.currentTurn){
         return;
+    }
 
     let hand =
-    myPlayer === 'P1'
-    ? gameState.player1
-    : gameState.player2;
+        myPlayer==="P1"
+        ? gameState.player1Hand
+        : gameState.player2Hand;
 
     const played =
-    hand.splice(index,1)[0];
+        hand.splice(index,1)[0];
 
-    gameState.table[
-        myPlayer
-    ] = played;
+    gameState.tableCards[myPlayer] =
+        played;
 
-    gameState.turn =
-    myPlayer === 'P1'
-    ? 'P2'
-    : 'P1';
+    gameState.currentTurn =
+        myPlayer==="P1"
+        ? "P2"
+        : "P1";
 
     if(
-        gameState.table.P1 &&
-        gameState.table.P2
+        gameState.tableCards.P1 &&
+        gameState.tableCards.P2
     ){
 
-        setTimeout(async()=>{
-
-            finishRound();
-
-            await saveGame();
-
-        },1000);
-
+        setTimeout(()=>{
+            decideWinner();
+        },500);
     }
 
     await saveGame();
 
+    renderEverything();
 }
 
-function finishRound(){
+// ===========================
+// DECIDE WINNER
+// ===========================
 
-    const winner =
-    Math.random()>0.5
-    ? 'P1'
-    : 'P2';
+async function decideWinner(){
+
+    const valuesRank = {
+        "7":1,
+        "8":2,
+        "9":3,
+        "10":4,
+        "J":5,
+        "Q":6,
+        "K":7,
+        "A":8
+    };
+
+    const p1 =
+        gameState.tableCards.P1;
+
+    const p2 =
+        gameState.tableCards.P2;
+
+    let winner = null;
+
+    if(
+        valuesRank[p1.val] >
+        valuesRank[p2.val]
+    ){
+        winner = "P1";
+    }else{
+        winner = "P2";
+    }
 
     gameState.scores[winner]++;
 
-    gameState.turn = winner;
+    gameState.currentTurn = winner;
 
-    gameState.table = {
+    gameState.tableCards = {
         P1:null,
         P2:null
     };
 
-    if(
-        gameState.player1.length===0 &&
-        gameState.player2.length===0
-    ){
+    await saveGame();
 
-        let msg = "";
+    renderEverything();
 
-        if(
-            gameState.scores.P1 >
-            gameState.scores.P2
-        ){
-
-            msg =
-            "Player 1 Wins";
-
-        }else if(
-            gameState.scores.P2 >
-            gameState.scores.P1
-        ){
-
-            msg =
-            "Player 2 Wins";
-
-        }else{
-
-            msg = "Match Draw";
-
-        }
-
-        updateStatus(msg);
-
-    }
-
+    updateStatus(
+        winner + " won this round"
+    );
 }
 
-async function saveGame(){
+// ===========================
+// RENDER
+// ===========================
 
-    await client
-    .from('game_rooms')
-    .update({
-        game_state:gameState
-    })
-    .eq('id',roomId);
+function renderEverything(){
 
-}
+    renderHand(
+        "p1-hand",
+        gameState.player1Hand,
+        "P1"
+    );
 
-function render(){
-
-    renderHand();
-
-    renderOpponent();
+    renderHand(
+        "p2-hand",
+        gameState.player2Hand,
+        "P2"
+    );
 
     renderTable();
 
     document.getElementById(
-        "score1"
+        "p1-score"
     ).innerText =
     gameState.scores.P1;
 
     document.getElementById(
-        "score2"
+        "p2-score"
     ).innerText =
     gameState.scores.P2;
 
     document.getElementById(
-        "trump"
+        "turn-text"
     ).innerText =
-    gameState.trump;
-
-    updateStatus(
-        gameState.turn +
-        "'s Turn"
-    );
-
+    gameState.currentTurn;
 }
 
-function renderHand(){
+// ===========================
+// RENDER HAND
+// ===========================
+
+function renderHand(
+    containerId,
+    hand,
+    player
+){
 
     const box =
-    document.getElementById(
-        "myHand"
-    );
+        document.getElementById(
+            containerId
+        );
 
     box.innerHTML = "";
-
-    const hand =
-    myPlayer === 'P1'
-    ? gameState.player1
-    : gameState.player2;
 
     hand.forEach((card,index)=>{
 
         const div =
-        createCard(card);
+            createCard(card);
 
-        if(
-            gameState.turn !== myPlayer
-        ){
+        if(player===myPlayer){
 
-            div.classList.add(
-                "disabled"
-            );
-
+            div.onclick = ()=>{
+                playCard(index);
+            };
         }
 
-        div.onclick =
-        ()=>playCard(index);
-
         box.appendChild(div);
-
     });
-
 }
 
-function renderOpponent(){
-
-    const box =
-    document.getElementById(
-        "opponentHand"
-    );
-
-    box.innerHTML = "";
-
-    const hand =
-    myPlayer === 'P1'
-    ? gameState.player2
-    : gameState.player1;
-
-    hand.forEach(()=>{
-
-        const div =
-        document.createElement(
-            "div"
-        );
-
-        div.className = "card";
-
-        div.style.background =
-        "#444";
-
-        box.appendChild(div);
-
-    });
-
-}
-
-function renderTable(){
-
-    document.getElementById(
-        "p1Slot"
-    ).innerHTML = "";
-
-    document.getElementById(
-        "p2Slot"
-    ).innerHTML = "";
-
-    if(gameState.table.P1){
-
-        document.getElementById(
-            "p1Slot"
-        ).appendChild(
-            createCard(
-                gameState.table.P1
-            )
-        );
-
-    }
-
-    if(gameState.table.P2){
-
-        document.getElementById(
-            "p2Slot"
-        ).appendChild(
-            createCard(
-                gameState.table.P2
-            )
-        );
-
-    }
-
-}
+// ===========================
+// CREATE CARD
+// ===========================
 
 function createCard(card){
 
     const div =
-    document.createElement("div");
+        document.createElement("div");
 
     div.className =
-    "card " + card.color;
+        "card " + card.color;
 
     div.innerHTML = `
         <div>${card.val}</div>
-
         <div class="center">
             ${card.suit}
         </div>
-
-        <div class="bottom">
+        <div style="transform:rotate(180deg)">
             ${card.val}
         </div>
     `;
 
     return div;
-
 }
 
-function updateStatus(text){
+// ===========================
+// TABLE
+// ===========================
+
+function renderTable(){
+
+    document.getElementById(
+        "p1-slot"
+    ).innerHTML = "";
+
+    document.getElementById(
+        "p2-slot"
+    ).innerHTML = "";
+
+    if(gameState.tableCards.P1){
+
+        document.getElementById(
+            "p1-slot"
+        ).appendChild(
+            createCard(
+                gameState.tableCards.P1
+            )
+        );
+    }
+
+    if(gameState.tableCards.P2){
+
+        document.getElementById(
+            "p2-slot"
+        ).appendChild(
+            createCard(
+                gameState.tableCards.P2
+            )
+        );
+    }
+}
+
+// ===========================
+// STATUS
+// ===========================
+
+function updateStatus(msg){
 
     document.getElementById(
         "status"
-    ).innerText = text;
-
+    ).innerText = msg;
 }
 
 </script>
