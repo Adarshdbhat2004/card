@@ -413,16 +413,13 @@
             roomID = urlParams.get('room');
 
             if (roomID && roomID.trim() !== "") {
-                // Anyone arriving with a ?room link is strictly Player 2
                 myRole = 'P2';
                 document.getElementById('setup-screen').style.display = 'none';
                 document.getElementById('main-game-panel').style.display = 'block';
                 document.getElementById('chat-widget').style.display = 'block';
                 
-                // Let the document establish before turning on engines
                 setTimeout(() => { initRealtimeEngine(); }, 400);
             } else {
-                // Creator of the room is strictly Player 1
                 myRole = 'P1';
                 document.getElementById('btn-create-room').addEventListener('click', generateRoomID);
             }
@@ -436,7 +433,6 @@
         function generateRoomID() {
             roomID = Math.random().toString(36).substring(2, 9);
             
-            // Push room code directly into browser state so both players sync up 
             const newURL = window.location.origin + window.location.pathname + '?room=' + roomID;
             window.history.pushState({ path: newURL }, '', newURL);
 
@@ -462,7 +458,6 @@
         function initRealtimeEngine() {
             if (!roomID) return;
             
-            // Clean up any stale connections before running
             if(channel) { client.removeChannel(channel); }
 
             channel = client.channel(`room-${roomID}`, {
@@ -478,7 +473,6 @@
                     updateStatus("Opponent connected! Tap 'Start Match' below.");
                     appendSystemMessage("Opponent has entered the lobby.");
                     
-                    // Acknowledge presence back to Player 2
                     channel.send({ type: 'broadcast', event: 'host-acknowledge', payload: {} });
                 }
             })
@@ -569,7 +563,6 @@
                 if (status === 'SUBSCRIBED') {
                     if (myRole === 'P2') {
                         updateStatus("Syncing with lobby...");
-                        // Broadcast join event repeatedly for a brief period to ensure Host catches it
                         let attempts = 0;
                         let interval = setInterval(() => {
                             channel.send({ type: 'broadcast', event: 'join', payload: {} });
@@ -635,10 +628,13 @@
            STEP 1: TRUMP SELECTION VOTING
         ========================================= */
         function handleTrumpVoteClick(votedFor) {
+            // Update locally first
             trumpChooserVotes[myRole] = votedFor;
-            channel.send({ type: 'broadcast', event: 'sync-trump-vote', payload: { votes: trumpChooserVotes } });
             updateTrumpVoteUISignals();
             evaluateTrumpVoteAgreement();
+            
+            // Broadcast to opponent
+            channel.send({ type: 'broadcast', event: 'sync-trump-vote', payload: { votes: trumpChooserVotes } });
         }
 
         function resetTrumpVoteUIStyles() {
@@ -692,10 +688,13 @@
            STEP 2: STARTING PLAYER VOTING
         ========================================= */
         function handleStartVoteClick(votedFor) {
+            // Update locally first
             startVotes[myRole] = votedFor;
-            channel.send({ type: 'broadcast', event: 'sync-start-vote', payload: { votes: startVotes } });
             updateStartVoteUISignals();
             evaluateStartVoteAgreement();
+            
+            // Broadcast to opponent
+            channel.send({ type: 'broadcast', event: 'sync-start-vote', payload: { votes: startVotes } });
         }
 
         function resetStartVoteUIStyles() {
@@ -711,7 +710,7 @@
 
             let statusStr = "Waiting for selections...";
             if (startVotes.P1 && !startVotes.P2) statusStr = "Player 1 has voted. Waiting for Player 2...";
-            if (!startVotes.P1 && startVotes.StartVotes) statusStr = "Player 2 has voted. Waiting for Player 1...";
+            if (!startVotes.P1 && startVotes.P2) statusStr = "Player 2 has voted. Waiting for Player 1...";
             document.getElementById('start-vote-status-msg').innerText = statusStr;
         }
 
@@ -738,10 +737,13 @@
            STEP 3: TRICK WINNER VOTING
         ========================================= */
         function handleTrickVoteClick(claimedWinner) {
+            // Update locally first
             trickVotes[myRole] = claimedWinner;
-            channel.send({ type: 'broadcast', event: 'sync-trick-vote', payload: { votes: trickVotes } });
             updateTrickVoteUISignals();
             evaluateTrickVoteAgreement();
+            
+            // Broadcast to opponent
+            channel.send({ type: 'broadcast', event: 'sync-trick-vote', payload: { votes: trickVotes } });
         }
 
         function resetTrickVoteUIStyles() {
@@ -872,6 +874,9 @@
             });
         }
 
+        /* =========================================
+           RENDERING LOGIC
+        ========================================= */
         function renderTableSlots() {
             ['P1', 'P2'].forEach(p => {
                 const slot = document.getElementById(`${p.toLowerCase()}-slot`);
@@ -905,9 +910,6 @@
             }
         }
 
-        /* =========================================
-           RENDERING LOGIC
-        ========================================= */
         function renderHands() {
             const p1Box = document.getElementById('p1-hand');
             p1Box.innerHTML = '';
