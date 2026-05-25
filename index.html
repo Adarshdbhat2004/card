@@ -318,4 +318,22 @@
 
         function renderSlot(id, c) {
             const el = document.getElementById(id);
-            el.innerHTML = c ? `<div class
+            el.innerHTML = c ? `<div class="card ${c.c}"><div>${c.v}</div><div class="suit-center">${c.s}</div><div style="transform:rotate(180deg)">${c.v}</div></div>` : '';
+        }
+
+        function sendChat() {
+            const input = document.getElementById('chat-input');
+            if(!input.value.trim()) return;
+            channel.send({type:'broadcast', event:'chat', payload:{by:myRole, msg:input.value}});
+            addChat('You', input.value);
+            input.value = '';
+        }
+
+        function addChat(user, msg) {
+            const box = document.getElementById('chat-messages');
+            box.innerHTML += `<div class="msg"><b>${user}:</b> ${msg}</div>`;
+            box.scrollTop = box.scrollHeight;
+        }
+    </script>
+</body>
+</html>
